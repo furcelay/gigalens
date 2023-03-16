@@ -1,9 +1,11 @@
+from typing import List, Dict
 import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd, bijectors as tfb
 
 import gigalens.model
 import gigalens.tf.simulator
+import gigalens.profile
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
@@ -161,3 +163,38 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
         return log_like + log_prior, tf.reduce_mean(
             ((im_sim - self.observed_image) / self.err_map) ** 2, axis=(-2, -1)
         )
+
+class TFPhysicalModel(gigalens.model.PhysicalModel):
+    """A physical model for the lensing system.
+
+    Args:
+        lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
+        lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
+        source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
+
+    Attributes:
+        lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
+        lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
+        source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
+        lenses_constants: (:obj:`list` of :obj:`dict`): fixed lenses parameters
+        lens_light_constants: (:obj:`list` of :obj:`dict`): fixed lens light parameters
+        source_light_constants: (:obj:`list` of :obj:`dict`): fixed source light parameters
+    """
+
+    def __init__(
+        self,
+        lenses: List[gigalens.profile.MassProfile],
+        lens_light: List[gigalens.profile.LightProfile],
+        source_light: List[gigalens.profile.LightProfile],
+        lenses_constants: List[Dict] = None,
+        lens_light_constants:List[Dict] = None,
+        source_light_constants: List[Dict] = None,
+    ):
+        super(TFPhysicalModel, self).__init__(lenses, lens_light, source_light,
+                                              lenses_constants, lens_light_constants, source_light_constants)
+        self.lenses_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
+                                 for d in self.lenses_constants]
+        self.lens_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
+                                     for d in self.lens_light_constants]
+        self.source_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
+                                       for d in self.source_light_constants]

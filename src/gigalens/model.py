@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict
 
 import gigalens.profile
 
@@ -16,17 +16,32 @@ class PhysicalModel:
         lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
         lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
         source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
+        lenses_constants: (:obj:`list` of :obj:`dict`): fixed lenses parameters
+        lens_light_constants: (:obj:`list` of :obj:`dict`): fixed lens light parameters
+        source_light_constants: (:obj:`list` of :obj:`dict`): fixed source light parameters
     """
 
     def __init__(
-            self,
-            lenses: List[gigalens.profile.MassProfile],
-            lens_light: List[gigalens.profile.LightProfile],
-            source_light: List[gigalens.profile.LightProfile],
+        self,
+        lenses: List[gigalens.profile.MassProfile],
+        lens_light: List[gigalens.profile.LightProfile],
+        source_light: List[gigalens.profile.LightProfile],
+        lenses_constants: List[Dict] = None,
+        lens_light_constants:List[Dict] = None,
+        source_light_constants: List[Dict] = None,
     ):
         self.lenses = lenses
         self.lens_light = lens_light
         self.source_light = source_light
+        if lenses_constants is None:
+            lenses_constants = [dict() for _ in range(len(lenses))]
+        if lens_light_constants is None:
+            lens_light_constants = [dict() for _ in range(len(lens_light))]
+        if source_light_constants is None:
+            source_light_constants = [dict() for _ in range(len(source_light))]
+        self.lenses_constants = lenses_constants
+        self.lens_light_constants = lens_light_constants
+        self.source_light_constants = source_light_constants
 
 
 class ProbabilisticModel(ABC):
