@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+import numpy as np
 import tensorflow as tf
 from lenstronomy.Util.kernel_util import subgrid_kernel
 
@@ -27,9 +28,19 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         self.transform_pix2angle = tf.constant(
             self.transform_pix2angle, dtype=tf.float32
         ) / float(self.supersample)
-        _, _, img_X, img_Y = self.get_coords(
-            self.supersample, sim_config.num_pix, self.transform_pix2angle
-        )
+
+        if sim_config.pix_region is None:
+            region = np.ones((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample), dtype=bool)
+            img_region = np.ones((self.wcs.n_x, self.wcs.n_y))
+        else:
+            img_region = sim_config.pix_region
+            region = np.repeat(img_region, self.supersample, axis=0).reshape(self.wcs.n_x * self.supersample,
+                                                                             self.wcs.n_y)
+            region = np.repeat(region, self.supersample, axis=1).reshape(self.wcs.n_x * self.supersample,
+                                                                         self.wcs.n_y * self.supersample)
+        self.region = tf.constant(tf.where(region))
+        self.img_region = tf.constant(img_region.astype(np.float32))
+        img_X, img_Y = self.wcs.pix2angle(self.region[:, 1], self.region[:, 0])
         self.img_X = tf.constant(
             tf.repeat(img_X[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
         )
@@ -37,10 +48,12 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             tf.repeat(img_Y[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
         )
 
+        self.bs = tf.constant(bs)
+
         self.numPix = tf.constant(sim_config.num_pix)
         self.bs = tf.constant(bs)
         self.depth = tf.constant(
-            sum([x.depth for x in self.phys_model.lens_light]) + sum([x.depth for x in self.phys_model.source_light])
+            len(self.phys_model.lens_light) + len(self.phys_model.source_light)
         )
         self.kernel = None
         self.flat_kernel = None
@@ -55,12 +68,25 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             self.flat_kernel = tf.constant(kernel, dtype=tf.float32)
 
     @tf.function
-    def _beta(self, lens_params: List[Dict]):
-        beta_x, beta_y = self.img_X, self.img_Y
-        for lens, p in zip(self.phys_model.lenses, lens_params):
-            f_xi, f_yi = lens.deriv(self.img_X, self.img_Y, **p)
+    def beta(self, x, y, lens_params: List[Dict]):
+        beta_x, beta_y = x, y
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            f_xi, f_yi = lens.deriv(x, y, **p, **c)
             beta_x, beta_y = beta_x - f_xi, beta_y - f_yi
         return beta_x, beta_y
+
+    # @tf.function
+    # def magnification(self, x, y, lens_params: List[Dict]):
+    #     f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
+    #     for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+    #         f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
+    #         f_xx += f_xx_i
+    #         f_xy += f_xy_i
+    #         f_yx += f_yx_i
+    #         f_yy += f_yy_i
+    #     det_A = (1 - f_xx) * (1 - f_yy) - f_xy * f_yx
+    #
+    #     return 1. / det_A  # attention, if dividing by zero
 
     @tf.function
     def simulate(self, params, no_deflection=False):
@@ -70,14 +96,22 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             lens_light_params, source_light_params = params[1], params[2]
         else:
             source_light_params = params[1]
-        beta_x, beta_y = self._beta(lens_params)
+        beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
-        img = tf.zeros_like(self.img_X)
-        for lightModel, p in zip(self.phys_model.lens_light, lens_light_params):
-            img += lightModel.light(self.img_X, self.img_Y, **p)
-        for lightModel, p in zip(self.phys_model.source_light, source_light_params):
-            img += lightModel.light(beta_x, beta_y, **p)
+
+        img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
+        for lightModel, p, c in zip(self.phys_model.lens_light, lens_light_params,
+                                    self.phys_model.lens_light_constants):
+            img = tf.tensor_scatter_nd_add(img,
+                                           self.region,
+                                           lightModel.light(self.img_X, self.img_Y, **p, **c))
+        for lightModel, p, c in zip(self.phys_model.source_light, source_light_params,
+                                    self.phys_model.source_light_constants):
+            img = tf.tensor_scatter_nd_add(img,
+                                           self.region,
+                                           lightModel.light(beta_x, beta_y, **p, **c))
+
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
         ret = (
@@ -107,21 +141,30 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             no_deflection=False,
     ):
         lens_params = params[0]
-        lens_light_params, source_light_params = [], []
+        lens_light_params, source_light_params = None, None
         if len(self.phys_model.lens_light) > 0:
             lens_light_params, source_light_params = params[1], params[2]
         else:
             source_light_params = params[1]
-        beta_x, beta_y = self._beta(lens_params)
+        beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
-        img = tf.zeros((0, *self.img_X.shape))
+        img = tf.zeros((0, self.wcs.n_x, self.wcs.n_y, self.bs))
         for lightModel, p in zip(self.phys_model.lens_light, lens_light_params):
-            tmp = lightModel.light(self.img_X, self.img_Y, **p)
-            img = tf.concat((img, tmp), axis=0, )
+            img = tf.concat(
+                (img,
+                 tf.scatter_nd(self.region,
+                               lightModel.light(self.img_X, self.img_Y, **p)[tf.newaxis, ...],
+                               img.shape)),
+                axis=0,
+            )
         for lightModel, p in zip(self.phys_model.source_light, source_light_params):
-            tmp = lightModel.light(beta_x, beta_y, **p)
-            img = tf.concat((img, tmp), axis=0)
+            img = tf.concat(
+                (img,
+                 tf.scatter_nd(self.region,
+                               lightModel.light(beta_x, beta_y, **p)[tf.newaxis, ...],
+                               img.shape)),
+            )
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(
             img, (3, 1, 2, 0)

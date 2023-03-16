@@ -1,7 +1,8 @@
-from typing import List, Dict
 import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd, bijectors as tfb
+
+from typing import List, Dict
 
 import gigalens.model
 import gigalens.tf.simulator
@@ -29,16 +30,42 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     """
 
     def __init__(
-            self,
-            prior: tfd.Distribution,
-            observed_image=None,
-            background_rms=None,
-            exp_time=None,
+        self,
+        prior: tfd.Distribution,
+        observed_image=None,
+        background_rms=None,
+        exp_time=None,
+        centroids_x=None,
+        centroids_y=None,
+        centroids_errors_x=None,
+        centroids_errors_y=None,
+        include_pixels=True,
+        include_positions=True,
+        use_magnification=False,
     ):
         super(ForwardProbModel, self).__init__(prior)
+
+        self.include_pixels = include_pixels
+        self.include_positions = include_positions
+        self.use_magnification = use_magnification
+
         self.observed_image = tf.constant(observed_image, dtype=tf.float32)
         self.background_rms = tf.constant(background_rms, dtype=tf.float32)
         self.exp_time = tf.constant(float(exp_time), dtype=tf.float32)
+
+        if self.include_positions:
+            self.centroids_x = tf.convert_to_tensor(centroids_x, dtype=tf.float32)
+            self.centroids_y = tf.convert_to_tensor(centroids_y, dtype=tf.float32)
+            self.centroids_errors_x = tf.convert_to_tensor(centroids_errors_x, dtype=tf.float32)
+            self.centroids_errors_y = tf.convert_to_tensor(centroids_errors_y, dtype=tf.float32)
+        else:
+            self.centroids_x = None
+            self.centroids_y = None
+            self.centroids_errors_x = None
+            self.centroids_errors_y = None
+        self.centroids_x_batch = None
+        self.centroids_y_batch = None
+
         example = prior.sample(seed=0)
         size = int(tf.size(tf.nest.flatten(example)))
         self.pack_bij = tfb.Chain(
@@ -51,6 +78,38 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         )
         self.unconstraining_bij = prior.experimental_default_event_space_bijector()
         self.bij = tfb.Chain([self.unconstraining_bij, self.pack_bij])
+
+    @tf.function
+    def stats_pixels(self, simulator: gigalens.tf.simulator.LensSimulator, params):
+        im_sim = simulator.simulate(params)
+        err_map = tf.math.sqrt(self.background_rms ** 2 + im_sim / self.exp_time)
+        obs_img = self.observed_image
+        chi2 = tf.reduce_sum(((im_sim - obs_img) / err_map) ** 2 * simulator.img_region, axis=(-2, -1))
+        normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2) * simulator.img_region, axis=(-2, -1))
+        log_like = -1 / 2 * (chi2 + normalization)
+        red_chi2 = chi2 / tf.math.count_nonzero(simulator.img_region, dtype=tf.float32)
+        return log_like, red_chi2
+
+    @tf.function
+    def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, lens_params: List[Dict]):
+        beta_centroids = tf.stack(simulator.beta(self.centroids_x_batch, self.centroids_y_batch, lens_params), axis=0)
+        beta_centroids = tf.transpose(beta_centroids, (2, 0, 1))  # batch size, xy, images
+        beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
+        beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
+
+        if self.use_magnification:
+            raise NotImplementedError("Magnifications still not implemented")
+            # magnifications = simulator.magnification(self.centroids_x_batch, self.centroids_y_batch, lens_params)
+        else:
+            magnifications = tf.ones_like(self.centroids_x_batch, dtype=tf.float32)
+        magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
+        err_map = tf.stack([self.centroids_errors_x / magnifications, self.centroids_errors_y / magnifications],
+                           axis=1)  # batch size, xy, images
+        chi2 = tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
+        normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
+        log_like = -1/2 * (chi2 + normalization)
+        red_chi2 = chi2 / tf.size(self.centroids_x, out_type=tf.float32)
+        return log_like, red_chi2
 
     @tf.function
     def log_prob(self, simulator: gigalens.tf.simulator.LensSimulator, z):
@@ -74,18 +133,35 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         Returns:
             The reparameterized log posterior density, with shape ``(bs,)``.
         """
-        x = self.bij.forward(z)
-        im_sim = simulator.simulate(x)
-        err_map = tf.math.sqrt(self.background_rms ** 2 + tf.clip_by_value(im_sim, 0, np.inf) / self.exp_time)
-        log_like = tfd.Independent(
-            tfd.Normal(im_sim, err_map), reinterpreted_batch_ndims=2
-        ).log_prob(self.observed_image)
+        params = self.bij.forward(z)
+
+        log_like, red_chi2 = tf.zeros(z.shape[0]), tf.zeros(z.shape[0])
+        n_chi = 0
+        if self.include_pixels:
+            log_like_pix, red_chi2_pix = self.stats_pixels(simulator, params)
+            log_like += log_like_pix
+            red_chi2 += red_chi2_pix
+            n_chi += 1
+        if self.include_positions:
+            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params[0])
+            log_like += log_like_pos
+            red_chi2 += red_chi2_pos
+            n_chi += 1
+        red_chi2 /= n_chi
+
         log_prior = self.prior.log_prob(
-            x
+            params
         ) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
-        return log_like + log_prior, tf.reduce_mean(
-            ((im_sim - self.observed_image) / err_map) ** 2, axis=(-2, -1)
-        )
+        return log_like + log_prior, red_chi2
+
+    def init_centroids(self, bs):
+        if self.include_positions:
+            self.centroids_x_batch = tf.constant(
+                tf.repeat(self.centroids_x[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
+            )
+            self.centroids_y_batch = tf.constant(
+                tf.repeat(self.centroids_y[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
+            )
 
 
 class BackwardProbModel(gigalens.model.ProbabilisticModel):
@@ -95,8 +171,8 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
 
     Attributes:
         observed_image (:obj:`tf.Tensor` or :obj:`numpy.array`): The observed image.
-        background_rms (float): The estimated background Gaussian noise level
-        exp_time (float): The exposure time (used for calculating Poisson shot noise)
+        # background_rms (float): The estimated background Gaussian noise level
+        # exp_time (float): The exposure time (used for calculating Poisson shot noise)
         pack_bij (:obj:`tfp.bijectors.Bijector`): A bijector that reshapes from a tensor to a structured parameter
             object (i.e., dictionaries of parameter values). Does not change the input parameters whatsoever, it only
             reshapes them.
@@ -109,7 +185,7 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
     """
 
     def __init__(
-            self, prior: tfd.Distribution, observed_image, background_rms, exp_time
+        self, prior: tfd.Distribution, observed_image, background_rms, exp_time
     ):
         super(BackwardProbModel, self).__init__(prior)
         err_map = tf.math.sqrt(
@@ -159,10 +235,13 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
         x = self.bij.forward(z)
         im_sim = simulator.lstsq_simulate(x, self.observed_image, self.err_map)
         log_like = self.observed_dist.log_prob(im_sim)
-        log_prior = self.prior.log_prob(x) + self.unconstraining_bij.forward_log_det_jacobian(x)
+        log_prior = self.prior.log_prob(
+            x
+        ) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
         return log_like + log_prior, tf.reduce_mean(
             ((im_sim - self.observed_image) / self.err_map) ** 2, axis=(-2, -1)
         )
+
 
 class TFPhysicalModel(gigalens.model.PhysicalModel):
     """A physical model for the lensing system.
@@ -176,9 +255,6 @@ class TFPhysicalModel(gigalens.model.PhysicalModel):
         lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
         lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
         source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
-        lenses_constants: (:obj:`list` of :obj:`dict`): fixed lenses parameters
-        lens_light_constants: (:obj:`list` of :obj:`dict`): fixed lens light parameters
-        source_light_constants: (:obj:`list` of :obj:`dict`): fixed source light parameters
     """
 
     def __init__(
