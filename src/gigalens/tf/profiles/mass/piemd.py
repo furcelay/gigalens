@@ -34,7 +34,8 @@ class DPIS(MassProfile):
         """
         sorts Ra and Rs to make sure Rs > Ra
         """
-        Ra, Rs = tf.where(Ra < Rs, Ra, Rs)
+        Ra = tf.where(Ra < Rs, Ra, Rs)
+        Rs = tf.where(Ra > Rs, Ra, Rs)
         Ra = tf.math.maximum(self._r_min, Ra)
         Rs = tf.where(Rs > Ra + self._r_min, Rs, Rs + self._r_min)
         return Ra, Rs
