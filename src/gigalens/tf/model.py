@@ -154,6 +154,24 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         ) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
         return log_like + log_prior, red_chi2
 
+    @tf.function
+    def log_like(self, simulator, z):
+        params = self.bij.forward(z)
+
+        log_like = tf.zeros(z.shape[0])
+        if self.include_pixels:
+            log_like_pix, _ = self.stats_pixels(simulator, params)
+            log_like += log_like_pix
+        if self.include_positions:
+            log_like_pos, _ = self.stats_positions(simulator, params[0])
+            log_like += log_like_pos
+        return log_like
+
+    @tf.function
+    def log_prior(self, z):
+        params = self.bij.forward(z)
+        return self.prior.log_prob(params) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
+
     def init_centroids(self, bs):
         if self.include_positions:
             self.centroids_x_batch = tf.constant(
