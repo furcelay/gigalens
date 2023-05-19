@@ -1,12 +1,8 @@
 import tensorflow as tf
-import tensorflow_probability as tfp
-
-import gigalens.profile
-
-tfd = tfp.distributions
+from gigalens.tf.profile import MassProfile
 
 
-class SIE(gigalens.profile.MassProfile):
+class SIE(MassProfile):
     _name = "SIE"
     s_scale = 1e-4
     _params = ["theta_E", "e1", "e2", "center_x", "center_y"]
@@ -48,3 +44,4 @@ class SIE(gigalens.profile.MassProfile):
             phi, name=self.name + "rotate-sin"
         )
         return x * cos_phi + y * sin_phi, -x * sin_phi + y * cos_phi
+

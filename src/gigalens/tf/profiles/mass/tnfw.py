@@ -2,12 +2,12 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-import gigalens.profile
+from gigalens.tf.profile import MassProfile
 
 tfd = tfp.distributions
 
 
-class TNFW(gigalens.profile.MassProfile):
+class TNFW(MassProfile):
     _name = "TNFW"
     _params = ["Rs", "alpha_Rs", "r_trunc", "center_x", "center_y"]
 
