@@ -58,6 +58,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.centroids_y = [tf.convert_to_tensor(cy, dtype=tf.float32) for cy in centroids_y]
             self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
             self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
+            self.n_position = 2 * tf.size(tf.concat(self.centroids_x, axis=0), out_type=tf.float32)
         else:
             self.centroids_x = None
             self.centroids_y = None
@@ -112,7 +113,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             chi2 += tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
             normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
             log_like += -1/2 * (chi2 + normalization)
-        red_chi2 = chi2 / tf.size(self.centroids_x, out_type=tf.float32)
+        red_chi2 = chi2 / self.n_position
         return log_like, red_chi2
 
     @tf.function
