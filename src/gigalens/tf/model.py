@@ -102,8 +102,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
 
             if self.use_magnification:
-                raise NotImplementedError("Magnifications still not implemented")
-                # magnifications = simulator.magnification(cx, cy, lens_params)
+                magnifications = simulator.magnification(cx, cy, lens_params)
             else:
                 magnifications = tf.ones_like(cx, dtype=tf.float32)
             magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images

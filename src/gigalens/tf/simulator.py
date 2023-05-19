@@ -75,18 +75,18 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             beta_x, beta_y = beta_x - f_xi, beta_y - f_yi
         return beta_x, beta_y
 
-    # @tf.function
-    # def magnification(self, x, y, lens_params: List[Dict]):
-    #     f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
-    #     for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
-    #         f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
-    #         f_xx += f_xx_i
-    #         f_xy += f_xy_i
-    #         f_yx += f_yx_i
-    #         f_yy += f_yy_i
-    #     det_A = (1 - f_xx) * (1 - f_yy) - f_xy * f_yx
-    #
-    #     return 1. / det_A  # attention, if dividing by zero
+    @tf.function
+    def magnification(self, x, y, lens_params: List[Dict]):
+        f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
+            f_xx += f_xx_i
+            f_xy += f_xy_i
+            f_yx += f_yx_i
+            f_yy += f_yy_i
+        det_A = (1 - f_xx) * (1 - f_yy) - f_xy * f_yx
+
+        return 1. / det_A  # attention, if dividing by zero
 
     @tf.function
     def simulate(self, params, no_deflection=False):
