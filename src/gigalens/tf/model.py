@@ -54,10 +54,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self.exp_time = tf.constant(float(exp_time), dtype=tf.float32)
 
         if self.include_positions:
-            self.centroids_x = tf.convert_to_tensor(centroids_x, dtype=tf.float32)
-            self.centroids_y = tf.convert_to_tensor(centroids_y, dtype=tf.float32)
-            self.centroids_errors_x = tf.convert_to_tensor(centroids_errors_x, dtype=tf.float32)
-            self.centroids_errors_y = tf.convert_to_tensor(centroids_errors_y, dtype=tf.float32)
+            self.centroids_x = [tf.convert_to_tensor(cx, dtype=tf.float32) for cx in centroids_x]
+            self.centroids_y = [tf.convert_to_tensor(cy, dtype=tf.float32) for cy in centroids_y]
+            self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
+            self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
         else:
             self.centroids_x = None
             self.centroids_y = None
@@ -92,22 +92,27 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     @tf.function
     def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, lens_params: List[Dict]):
-        beta_centroids = tf.stack(simulator.beta(self.centroids_x_batch, self.centroids_y_batch, lens_params), axis=0)
-        beta_centroids = tf.transpose(beta_centroids, (2, 0, 1))  # batch size, xy, images
-        beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
-        beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
+        chi2 = 0.
+        log_like = 0.
+        for cx, cy, cex, cey in zip(self.centroids_x_batch, self.centroids_y_batch,
+                                    self.centroids_errors_x, self.centroids_errors_y):
+            beta_centroids = tf.stack(simulator.beta(cx, cy, lens_params), axis=0)
+            beta_centroids = tf.transpose(beta_centroids, (2, 0, 1))  # batch size, xy, images
+            beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
+            beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
 
-        if self.use_magnification:
-            raise NotImplementedError("Magnifications still not implemented")
-            # magnifications = simulator.magnification(self.centroids_x_batch, self.centroids_y_batch, lens_params)
-        else:
-            magnifications = tf.ones_like(self.centroids_x_batch, dtype=tf.float32)
-        magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
-        err_map = tf.stack([self.centroids_errors_x / magnifications, self.centroids_errors_y / magnifications],
-                           axis=1)  # batch size, xy, images
-        chi2 = tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
-        normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
-        log_like = -1/2 * (chi2 + normalization)
+            if self.use_magnification:
+                raise NotImplementedError("Magnifications still not implemented")
+                # magnifications = simulator.magnification(cx, cy, lens_params)
+            else:
+                magnifications = tf.ones_like(cx, dtype=tf.float32)
+            magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
+
+            err_map = tf.stack([cex / magnifications, cey / magnifications],
+                               axis=1)  # batch size, xy, images
+            chi2 += tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
+            normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
+            log_like += -1/2 * (chi2 + normalization)
         red_chi2 = chi2 / tf.size(self.centroids_x, out_type=tf.float32)
         return log_like, red_chi2
 
@@ -174,12 +179,12 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     def init_centroids(self, bs):
         if self.include_positions:
-            self.centroids_x_batch = tf.constant(
-                tf.repeat(self.centroids_x[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
-            )
-            self.centroids_y_batch = tf.constant(
-                tf.repeat(self.centroids_y[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
-            )
+            self.centroids_x_batch = [tf.constant(
+                tf.repeat(cx[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
+            ) for cx in self.centroids_x]
+            self.centroids_y_batch = [tf.constant(
+                tf.repeat(cy[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
+            ) for cy in self.centroids_y]
 
 
 class BackwardProbModel(gigalens.model.ProbabilisticModel):
