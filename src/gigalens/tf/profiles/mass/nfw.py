@@ -78,11 +78,11 @@ class NFW(MassProfile):
         x, y = x - center_x, y - center_y
         R = tf.math.sqrt(x ** 2 + y ** 2)
         R = tf.math.maximum(self._c, R)
-        r = R / Rs
-        gx = self.g_(r)
-        Fx = self.F_(r)
+        X = R / Rs
+        gx = self.g_(X)
+        Fx = self.F_(X)
         kappa = 2 * rho0 * Rs * Fx
-        a = 2 * rho0 * Rs * (2 * gx / r ** 2 - Fx)
+        a = 2 * rho0 * Rs * (2 * gx / X ** 2 - Fx)
         gamma1, gamma2 = a * (y ** 2 - x ** 2) / R ** 2, -a * 2 * (x * y) / R ** 2
         f_xx = kappa + gamma1
         f_yy = kappa - gamma1

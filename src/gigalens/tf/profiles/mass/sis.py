@@ -16,11 +16,11 @@ class SIS(MassProfile):
     @tf.function
     def hessian(self, x, y, theta_E, center_x, center_y):
 
-        dx, dy = x - center_x, y - center_y
+        x, y = x - center_x, y - center_y
         R = (x**2 + y**2)**(3./2)
         a = tf.where(R == 0, 0.0, theta_E / R)
 
-        f_xx = dy**2 * a
-        f_yy = dx**2 * a
-        f_xy = -dx * dy * a
+        f_xx = y**2 * a
+        f_yy = x**2 * a
+        f_xy = -x * y * a
         return f_xx, f_xy, f_xy, f_yy

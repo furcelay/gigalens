@@ -14,26 +14,26 @@ class TNFW(MassProfile):
     @tf.function
     def deriv(self, x, y, Rs, alpha_Rs, r_trunc, center_x, center_y):
         rho0 = alpha_Rs / (4.0 * Rs ** 2 * (1.0 + tf.math.log(0.5)))
-        dx, dy = (x - center_x), (y - center_y)
-        R = tf.math.sqrt(dx ** 2 + dy ** 2)
+        x, y = (x - center_x), (y - center_y)
+        R = tf.math.sqrt(x ** 2 + y ** 2)
         R = tf.maximum(R, 0.001 * Rs)
-        x = R / Rs
+        X = R / Rs
         tau = r_trunc / Rs
 
-        L = tf.math.log(x / (tau + tf.math.sqrt(tau ** 2 + x ** 2)))
-        F = self.F(x)
+        L = tf.math.log(X / (tau + tf.math.sqrt(tau ** 2 + X ** 2)))
+        F = self.F(X)
         gx = (
                 (tau ** 2)
                 / (tau ** 2 + 1) ** 2
                 * (
-                        (tau ** 2 + 1 + 2 * (x ** 2 - 1)) * F
+                        (tau ** 2 + 1 + 2 * (X ** 2 - 1)) * F
                         + tau * np.pi
                         + (tau ** 2 - 1) * tf.math.log(tau)
-                        + tf.math.sqrt(tau ** 2 + x ** 2) * (-np.pi + L * (tau ** 2 - 1) / tau)
+                        + tf.math.sqrt(tau ** 2 + X ** 2) * (-np.pi + L * (tau ** 2 - 1) / tau)
                 )
         )
-        a = 4 * rho0 * Rs * gx / x ** 2
-        return a * dx, a * dy
+        a = 4 * rho0 * Rs * gx / X ** 2
+        return a * x, a * y
 
     def F(self, x):
         # x is r/Rs
