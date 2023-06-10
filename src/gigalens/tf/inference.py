@@ -27,7 +27,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         if self.prob_model.include_pixels:
             event_size += tf.size(lens_sim.img_region, out_type=tf.float32)
         if self.prob_model.include_positions:
-            event_size += 2 * tf.size(self.prob_model.centroids_x, out_type=tf.float32)
+            event_size += self.prob_model.n_position
 
         def train_step():
             with tf.GradientTape() as tape:

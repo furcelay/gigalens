@@ -50,7 +50,7 @@ class Sersic(gigalens.profile.LightProfile):
         if e2 is None:
             e2 = tf.zeros_like(cx)
         phi = tf.atan2(e2, e1) / 2
-        c = tf.math.sqrt(e1 ** 2 + e2 ** 2)
+        c = tf.math.minimum(tf.math.sqrt(e1 ** 2 + e2 ** 2), 0.9999)
         q = (1 - c) / (1 + c)
         dx, dy = x - cx, y - cy
         cos_phi, sin_phi = tf.math.cos(phi), tf.math.sin(phi)
