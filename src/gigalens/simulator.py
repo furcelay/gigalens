@@ -29,7 +29,7 @@ class SimulatorConfig:
     pix_region: Optional[np.array] = None
 
 
-class WCS:
+class LensWCS:
     def __init__(self, n, supersample=1, transform_pix2angle=None, pix_scale=1.):
 
         if transform_pix2angle is None:
@@ -86,13 +86,13 @@ class LensSimulatorInterface(ABC):
         self.phys_model = phys_model
         self.sim_config = sim_config
         self.bs = bs
-        self.wcs = WCS(n=sim_config.num_pix, supersample=sim_config.supersample,
-                       transform_pix2angle=sim_config.transform_pix2angle, pix_scale=sim_config.delta_pix)
+        self.wcs = LensWCS(n=sim_config.num_pix, supersample=sim_config.supersample,
+                           transform_pix2angle=sim_config.transform_pix2angle, pix_scale=sim_config.delta_pix)
 
     @abstractmethod
     def simulate(
         self,
-        params: Tuple[List[Dict], List[Dict], List[Dict]],
+        params: Dict[str, List[Dict]],
     ):
         """Simulates lenses with physical parameters ``params``.
 
@@ -108,7 +108,7 @@ class LensSimulatorInterface(ABC):
     @abstractmethod
     def lstsq_simulate(
         self,
-        params: Tuple[List[Dict], List[Dict], List[Dict]],
+        params: Dict[str, List[Dict]],
         observed_image,
         err_map,
     ):

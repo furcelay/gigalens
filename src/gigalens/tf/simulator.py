@@ -90,12 +90,19 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
 
     @tf.function
     def simulate(self, params, no_deflection=False):
-        lens_params = params[0]
-        lens_light_params, source_light_params = [], []
-        if len(self.phys_model.lens_light) > 0:
-            lens_light_params, source_light_params = params[1], params[2]
+        if 'lens_mass' in params:
+            lens_params = params['lens_mass']
         else:
-            source_light_params = params[1]
+            lens_params = [{} for _ in self.phys_model.lenses]
+        if 'lens_light' in params:
+            lens_light_params = params['lens_light']
+        else:
+            lens_light_params = [{} for _ in self.phys_model.lens_light]
+        if 'source_light' in params:
+            source_light_params = params['source_light']
+        else:
+            source_light_params = [{} for _ in self.phys_model.source_light]
+
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
@@ -140,12 +147,19 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             return_coeffs=False,
             no_deflection=False,
     ):
-        lens_params = params[0]
-        lens_light_params, source_light_params = None, None
-        if len(self.phys_model.lens_light) > 0:
-            lens_light_params, source_light_params = params[1], params[2]
+        if 'lens_mass' in params:
+            lens_params = params['lens_mass']
         else:
-            source_light_params = params[1]
+            lens_params = [{} for _ in self.phys_model.lenses]
+        if 'lens_light' in params:
+            lens_light_params = params['lens_light']
+        else:
+            lens_light_params = [{} for _ in self.phys_model.lens_light]
+        if 'source_light' in params:
+            source_light_params = params['source_light']
+        else:
+            source_light_params = [{} for _ in self.phys_model.source_light]
+
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
@@ -206,3 +220,91 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             return coeffs
         ret = tf.reduce_sum(ret * coeffs[:, tf.newaxis, tf.newaxis, :], axis=-1)
         return tf.squeeze(ret)
+
+    @tf.function
+    def simulate_source(self, params):
+        source_light_params = params['source_light']
+
+        img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
+        for lightModel, p, c in zip(self.phys_model.source_light, source_light_params,
+                                    self.phys_model.source_light_constants):
+            img = tf.tensor_scatter_nd_add(img,
+                                           self.region,
+                                           lightModel.light(self.img_X, self.img_Y, **p, **c))
+
+        img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
+        img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
+        ret = (
+            img[..., tf.newaxis]
+            if self.kernel is None
+            else tf.nn.conv2d(
+                img[..., tf.newaxis], self.flat_kernel, padding="SAME", strides=1
+            )
+        )
+        ret = (
+            tf.nn.avg_pool2d(
+                ret, ksize=self.supersample, strides=self.supersample, padding="SAME"
+            )
+            if self.supersample != 1
+            else ret
+        )
+        return tf.squeeze(ret) * self.conversion_factor
+
+    def simulate_lens_light(self, params):
+        lens_light_params = params['lens_light']
+
+        img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
+        for lightModel, p, c in zip(self.phys_model.lens_light, lens_light_params,
+                                    self.phys_model.lens_light_constants):
+            img = tf.tensor_scatter_nd_add(img,
+                                           self.region,
+                                           lightModel.light(self.img_X, self.img_Y, **p, **c))
+
+        img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
+        img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
+        ret = (
+            img[..., tf.newaxis]
+            if self.kernel is None
+            else tf.nn.conv2d(
+                img[..., tf.newaxis], self.flat_kernel, padding="SAME", strides=1
+            )
+        )
+        ret = (
+            tf.nn.avg_pool2d(
+                ret, ksize=self.supersample, strides=self.supersample, padding="SAME"
+            )
+            if self.supersample != 1
+            else ret
+        )
+        return tf.squeeze(ret) * self.conversion_factor
+
+    def simulate_images(self, params):
+        lens_params = params['lens_mass']
+        source_light_params = params['source_light']
+
+        beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
+
+        img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
+        for lightModel, p, c in zip(self.phys_model.source_light, source_light_params,
+                                    self.phys_model.source_light_constants):
+            img = tf.tensor_scatter_nd_add(img,
+                                           self.region,
+                                           lightModel.light(beta_x, beta_y, **p, **c))
+
+        img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
+        img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
+        ret = (
+            img[..., tf.newaxis]
+            if self.kernel is None
+            else tf.nn.conv2d(
+                img[..., tf.newaxis], self.flat_kernel, padding="SAME", strides=1
+            )
+        )
+        ret = (
+            tf.nn.avg_pool2d(
+                ret, ksize=self.supersample, strides=self.supersample, padding="SAME"
+            )
+            if self.supersample != 1
+            else ret
+        )
+        return tf.squeeze(ret) * self.conversion_factor
