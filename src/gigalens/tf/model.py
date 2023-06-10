@@ -35,6 +35,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         observed_image=None,
         background_rms=None,
         exp_time=None,
+        error_map=None,
         centroids_x=None,
         centroids_y=None,
         centroids_errors_x=None,
@@ -49,9 +50,21 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self.include_positions = include_positions
         self.use_magnification = use_magnification
 
-        self.observed_image = tf.constant(observed_image, dtype=tf.float32)
-        self.background_rms = tf.constant(background_rms, dtype=tf.float32)
-        self.exp_time = tf.constant(float(exp_time), dtype=tf.float32)
+        if self.include_pixels:
+            self.observed_image = tf.constant(observed_image, dtype=tf.float32)
+            if error_map is not None:
+                self.error_map = tf.constant(error_map, dtype=tf.float32)
+                self.background_rms = None
+                self.exp_time = None
+            else:
+                self.background_rms = tf.constant(background_rms, dtype=tf.float32)
+                self.exp_time = tf.constant(exp_time, dtype=tf.float32)
+                self.error_map = None
+        else:
+            self.observed_image = None
+            self.error_map = None
+            self.background_rms = None
+            self.exp_time = None
 
         if self.include_positions:
             self.centroids_x = [tf.convert_to_tensor(cx, dtype=tf.float32) for cx in centroids_x]
@@ -83,7 +96,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     @tf.function
     def stats_pixels(self, simulator: gigalens.tf.simulator.LensSimulator, params):
         im_sim = simulator.simulate(params)
-        err_map = tf.math.sqrt(self.background_rms ** 2 + im_sim / self.exp_time)
+        if self.error_map is not None:
+            err_map = self.error_map
+        else:
+            err_map = tf.math.sqrt(self.background_rms ** 2 + im_sim / self.exp_time)
         obs_img = self.observed_image
         chi2 = tf.reduce_sum(((im_sim - obs_img) / err_map) ** 2 * simulator.img_region, axis=(-2, -1))
         normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2) * simulator.img_region, axis=(-2, -1))
@@ -148,7 +164,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             red_chi2 += red_chi2_pix
             n_chi += 1
         if self.include_positions:
-            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params[0])
+            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params['lens_mass'])
             log_like += log_like_pos
             red_chi2 += red_chi2_pos
             n_chi += 1
@@ -168,7 +184,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             log_like_pix, _ = self.stats_pixels(simulator, params)
             log_like += log_like_pix
         if self.include_positions:
-            log_like_pos, _ = self.stats_positions(simulator, params[0])
+            log_like_pos, _ = self.stats_positions(simulator, params['lens_mass'])
             log_like += log_like_pos
         return log_like
 
