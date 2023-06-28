@@ -108,27 +108,28 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         return log_like, red_chi2
 
     @tf.function
-    def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, lens_params: List[Dict]):
+    def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, params):
         chi2 = 0.
         log_like = 0.
         for cx, cy, cex, cey in zip(self.centroids_x_batch, self.centroids_y_batch,
                                     self.centroids_errors_x, self.centroids_errors_y):
-            beta_centroids = tf.stack(simulator.beta(cx, cy, lens_params), axis=0)
+            beta_centroids = tf.stack(simulator.beta(cx, cy, params['lens_mass']), axis=0)
             beta_centroids = tf.transpose(beta_centroids, (2, 0, 1))  # batch size, xy, images
             beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
             beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
 
             if self.use_magnification:
-                magnifications = simulator.magnification(cx, cy, lens_params)
+                magnifications = simulator.magnification(cx, cy, params['lens_mass'])
             else:
                 magnifications = tf.ones_like(cx, dtype=tf.float32)
             magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
 
             err_map = tf.stack([cex / magnifications, cey / magnifications],
                                axis=1)  # batch size, xy, images
-            chi2 += tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
-            normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
-            log_like += -1/2 * (chi2 + normalization)
+            chi2_i = tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
+            normalization_i = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
+            log_like += -1/2 * (chi2_i + normalization_i)
+            chi2 += chi2_i
         red_chi2 = chi2 / self.n_position
         return log_like, red_chi2
 
@@ -184,7 +185,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             log_like_pix, _ = self.stats_pixels(simulator, params)
             log_like += log_like_pix
         if self.include_positions:
-            log_like_pos, _ = self.stats_positions(simulator, params['lens_mass'])
+            log_like_pos, _ = self.stats_positions(simulator, params)
             log_like += log_like_pos
         return log_like
 
@@ -302,14 +303,20 @@ class TFPhysicalModel(gigalens.model.PhysicalModel):
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
         lenses_constants: List[Dict] = None,
-        lens_light_constants:List[Dict] = None,
+        lens_light_constants: List[Dict] = None,
         source_light_constants: List[Dict] = None,
+        distance_constants: List[Dict] = None,
+        distance_reference: float = None,
     ):
         super(TFPhysicalModel, self).__init__(lenses, lens_light, source_light,
-                                              lenses_constants, lens_light_constants, source_light_constants)
+                                              lenses_constants, lens_light_constants, source_light_constants,
+                                              distance_constants, distance_reference)
         self.lenses_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                  for d in self.lenses_constants]
         self.lens_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                      for d in self.lens_light_constants]
         self.source_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                        for d in self.source_light_constants]
+        self.distance_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
+                                   for d in self.distance_constants]
+        self.distance_reference = tf.constant(self.distance_reference, dtype=tf.float32)
