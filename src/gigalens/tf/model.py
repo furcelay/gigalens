@@ -165,7 +165,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             red_chi2 += red_chi2_pix
             n_chi += 1
         if self.include_positions:
-            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params['lens_mass'])
+            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params)
             log_like += log_like_pos
             red_chi2 += red_chi2_pos
             n_chi += 1
