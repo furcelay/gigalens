@@ -27,8 +27,10 @@ class PhysicalModel:
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
         lenses_constants: List[Dict] = None,
-        lens_light_constants:List[Dict] = None,
+        lens_light_constants: List[Dict] = None,
         source_light_constants: List[Dict] = None,
+        distance_constants: List[Dict] = None,
+        distance_reference: float = None,
     ):
         self.lenses = lenses
         self.lens_light = lens_light
@@ -39,9 +41,20 @@ class PhysicalModel:
             lens_light_constants = [dict() for _ in range(len(lens_light))]
         if source_light_constants is None:
             source_light_constants = [dict() for _ in range(len(source_light))]
+        if distance_constants is None:
+            distance_constants = [dict() for _ in range(len(source_light))]
+            if distance_reference is None:
+                self.distance_reference = 1.
+        elif distance_reference is None:
+            try:
+                self.distance_reference = distance_constants[0]['eff_distance']
+                print("Distance reference not given, setting to source 0 eff_distance")
+            except KeyError:
+                raise ValueError("You must provide a distance reference when fitting the source 0 redshift")
         self.lenses_constants = lenses_constants
         self.lens_light_constants = lens_light_constants
         self.source_light_constants = source_light_constants
+        self.distance_constants = distance_constants
 
 
 class ProbabilisticModel(ABC):
