@@ -305,18 +305,12 @@ class TFPhysicalModel(gigalens.model.PhysicalModel):
         lenses_constants: List[Dict] = None,
         lens_light_constants: List[Dict] = None,
         source_light_constants: List[Dict] = None,
-        distance_constants: List[Dict] = None,
-        distance_reference: float = None,
     ):
         super(TFPhysicalModel, self).__init__(lenses, lens_light, source_light,
-                                              lenses_constants, lens_light_constants, source_light_constants,
-                                              distance_constants, distance_reference)
+                                              lenses_constants, lens_light_constants, source_light_constants)
         self.lenses_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                  for d in self.lenses_constants]
         self.lens_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                      for d in self.lens_light_constants]
         self.source_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                        for d in self.source_light_constants]
-        self.distance_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
-                                   for d in self.distance_constants]
-        self.distance_reference = tf.constant(self.distance_reference, dtype=tf.float32)
