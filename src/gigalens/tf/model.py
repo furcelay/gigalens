@@ -126,9 +126,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
             err_map = tf.stack([cex / magnifications, cey / magnifications],
                                axis=1)  # batch size, xy, images
-            chi2 += tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
-            normalization = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
-            log_like += -1/2 * (chi2 + normalization)
+            chi2_i = tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
+            normalization_i = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
+            log_like += -1 / 2 * (chi2_i + normalization_i)
+            chi2 += chi2_i
         red_chi2 = chi2 / self.n_position
         return log_like, red_chi2
 
