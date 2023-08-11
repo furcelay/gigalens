@@ -1,9 +1,12 @@
-GIGA-Lens
+GIGA-Lens-Clusters
 ========================
 
 .. image:: https://img.shields.io/pypi/v/gigalens.svg
     :target: https://pypi.python.org/pypi/gigalens
     :alt: Latest PyPI version
+
+This is an alternative branch of Giga-Lens intended for group and cluster lens modeling, this stills under intense
+development.
 
 Gradient Informed, GPU Accelerated Lens modelling (GIGA-Lens) is a package for fast Bayesian inference on strong
 gravitational lenses. For details, please see `our paper <https://arxiv.org/abs/2202.07663>`__. See
@@ -14,17 +17,9 @@ Usage
 
 Installation
 ------------
-``GIGA-Lens`` can be installed via pip: ::
+Install via pip from the github repo ::
 
-    pip install gigalens
-
-If pip notes an error after installation about conflicting dependencies, these can usually be safely ignored.
-If you wish to test the installation, tests can be run simply by running ``tox`` in the root directory.
-
-If you don’t have access to institutional GPUs, one easy way is to use GPU on Google Colab.  Please remember the
-very first cell should have ``!pip install gigalens``. If you do have access to institutional GPUs, you can set up a
-notebook to run on GPU.  For example, at `NESRC <https://jupyter.nersc.gov/hub/>`__, you can choose the kernel
-``tensorflow-2.6.0``, and include in the first cell: ``!pip install gigalens``.
+    pip install --no-deps --upgrade git+https://github.com/furcelay/gigalens.git@cluster-lens#egg=gigalens
 
 
 Requirements
