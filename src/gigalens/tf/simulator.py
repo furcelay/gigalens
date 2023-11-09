@@ -89,6 +89,31 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return 1. / det_A  # attention, if dividing by zero
 
     @tf.function
+    def convergence(self, x, y, lens_params: List[Dict]):
+        f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
+            f_xx += f_xx_i
+            f_xy += f_xy_i
+            f_yx += f_yx_i
+            f_yy += f_yy_i
+        kappa = (f_xx + f_yy) / 2
+        return kappa
+
+    @tf.function
+    def shear(self, x, y, lens_params: List[Dict]):
+        f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
+            f_xx += f_xx_i
+            f_xy += f_xy_i
+            f_yx += f_yx_i
+            f_yy += f_yy_i
+        gamma1 = (f_xx - f_yy) / 2
+        gamma2 = f_xy
+        return gamma1, gamma2
+
+    @tf.function
     def simulate(self, params, no_deflection=False):
         if 'lens_mass' in params:
             lens_params = params['lens_mass']
