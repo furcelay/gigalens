@@ -126,7 +126,7 @@ class DPIE(MassProfile):
         x, y = self._rotate(x, y, phi)
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         scale = E0 * r_cut / (r_cut - r_core)
-        f_xx_core, f_xy_core, f_yx_core, f_yy_core = self.complex_hessian_single(x, y, r_core, e, q)
+        f_xx_core, f_xy_core, f_yy_core = self.complex_hessian_single(x, y, r_core, e, q)
         f_xx_cut, f_xy_cut, f_yy_cut = self.complex_hessian_single(x, y, r_cut, e, q)
         f_xx = scale * (f_xx_core - f_xx_cut)
         f_xy = scale * (f_xx_core - f_xx_cut)
