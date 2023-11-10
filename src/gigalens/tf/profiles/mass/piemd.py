@@ -31,7 +31,7 @@ class DPIS(MassProfile):
     def deriv(self, x, y, E0, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
-        r2 = x**2 + y**2 # r2 instead of dividing by r twice
+        r2 = x**2 + y**2  # r2 instead of dividing by r twice
         scale = E0 * r_cut / (r_cut - r_core)
         alpha_r = scale / r2 * self._f_A20(r2, r_core, r_cut)
         f_x = alpha_r * x

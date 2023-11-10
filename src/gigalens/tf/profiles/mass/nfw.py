@@ -53,23 +53,24 @@ class NFW(MassProfile):
         # x is r/Rs
         x_shape = tf.shape(x)
         x = tf.reshape(x, (-1,))
-        nfwvals = tf.ones_like(x, dtype=tf.float32)
+        a = tf.ones_like(x, dtype=tf.float32) / 3  # a = 1/3 if x == 1
         inds1 = tf.where(x < 1)
         inds2 = tf.where(x > 1)
-        x1, x2 = tf.reshape(tf.gather(x, inds1), (-1,)), tf.reshape(
-            tf.gather(x, inds2), (-1,)
-        )
-        nfwvals = tf.tensor_scatter_nd_update(
-            nfwvals,
+        x1, x2 = tf.reshape(tf.gather(x, inds1), (-1,)), tf.reshape(tf.gather(x, inds2), (-1,))
+        a = tf.tensor_scatter_nd_update(
+            a,
             inds1,
-            1 / tf.math.sqrt(1 - x1 ** 2) * tf.math.atanh(tf.math.sqrt(1 - x1 ** 2)),
+            1 / (x1 ** 2 - 1) * (
+                    1 - 2 / tf.math.sqrt(1 - x1 ** 2) * tf.math.atanh(tf.math.sqrt((1 - x1) / (1 + x1)))),
         )
-        nfwvals = tf.tensor_scatter_nd_update(
-            nfwvals,
+        a = tf.tensor_scatter_nd_update(
+            a,
             inds2,
-            1 / tf.math.sqrt(x2 ** 2 - 1) * tf.math.atan(tf.math.sqrt(x2 ** 2 - 1)),
+            1 / (x2 ** 2 - 1) * (
+                    1 - 2 / tf.math.sqrt(x2 ** 2 - 1) * tf.math.atan(tf.math.sqrt((x2 - 1) / (1 + x2)))
+            ),
         )
-        return tf.reshape(nfwvals, x_shape)
+        return tf.reshape(a, x_shape)
 
     @tf.function
     def hessian(self, x, y, Rs, alpha_Rs, center_x, center_y):
