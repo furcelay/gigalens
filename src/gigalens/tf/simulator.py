@@ -90,27 +90,18 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
 
     @tf.function
     def convergence(self, x, y, lens_params: List[Dict]):
-        f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
+        kappa = tf.zeros_like(x)
         for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
-            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
-            f_xx += f_xx_i
-            f_xy += f_xy_i
-            f_yx += f_yx_i
-            f_yy += f_yy_i
-        kappa = (f_xx + f_yy) / 2
+            kappa += lens.convergence(x, y, **p, **c)
         return kappa
 
     @tf.function
     def shear(self, x, y, lens_params: List[Dict]):
-        f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
+        gamma1, gamma2 = tf.zeros_like(x), tf.zeros_like(x)
         for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
-            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
-            f_xx += f_xx_i
-            f_xy += f_xy_i
-            f_yx += f_yx_i
-            f_yy += f_yy_i
-        gamma1 = (f_xx - f_yy) / 2
-        gamma2 = f_xy
+            g1, g2 = lens.shear(x, y, **p, **c)
+            gamma1 += g1
+            gamma2 += g2
         return gamma1, gamma2
 
     @tf.function
