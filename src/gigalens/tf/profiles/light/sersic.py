@@ -22,6 +22,9 @@ class Sersic(gigalens.profile.LightProfile):
     _name = "SERSIC"
     _params = ["R_sersic", "n_sersic", "center_x", "center_y"]
 
+    def __init__(self):
+        super(Sersic, self).__init__()
+
     @tf.function
     def light(self, x, y, R_sersic, n_sersic, center_x, center_y, Ie=None):
         Ie = tf.ones_like(R_sersic) if self.use_lstsq else Ie
@@ -63,6 +66,9 @@ class SersicEllipse(Sersic):
     _name = "SERSIC_ELLIPSE"
     _params = ["R_sersic", "n_sersic", "e1", "e2", "center_x", "center_y"]
 
+    def __init__(self):
+        super(SersicEllipse, self).__init__()
+
     @tf.function
     def light(self, x, y, R_sersic, n_sersic, e1, e2, center_x, center_y, Ie=None):
         Ie = tf.ones_like(R_sersic) if self.use_lstsq else Ie
@@ -85,6 +91,9 @@ class CoreSersic(Sersic):
         "center_x",
         "center_y",
     ]
+
+    def __init__(self):
+        super(CoreSersic, self).__init__()
 
     @tf.function
     def light(

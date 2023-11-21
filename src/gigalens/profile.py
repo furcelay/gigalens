@@ -61,6 +61,9 @@ class LightProfile(Parameterized, ABC):
 class MassProfile(Parameterized, ABC):
     """Interface for a mass profile."""
 
+    def __init__(self, *args, **kwargs):
+        super(MassProfile, self).__init__(*args, **kwargs)
+
     @abstractmethod
     def deriv(self, x, y, **kwargs):
         """Calculates deflection angle.

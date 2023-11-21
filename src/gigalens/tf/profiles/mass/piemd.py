@@ -27,6 +27,9 @@ class DPIS(MassProfile):
     _params = ['E0', 'r_core', 'r_cut', 'center_x', 'center_y']
     _r_min = 0.0001
 
+    def __init__(self,):
+        super(DPIS, self).__init__()
+
     @tf.function
     def deriv(self, x, y, E0, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
@@ -94,9 +97,9 @@ class DPIS(MassProfile):
 class DPIE(MassProfile):
     _name = "dPIE"
     _params = ['E0', 'r_core', 'r_cut', 'center_x', 'center_y', 'e1', 'e2']
+    _r_min = 0.0001
 
     def __init__(self):
-        self._r_min = 0.0001
         super(DPIE, self).__init__()
 
     @tf.function

@@ -6,6 +6,9 @@ class SIS(MassProfile):
     _name = "SIS"
     _params = ["theta_E", "center_x", "center_y"]
 
+    def __init__(self):
+        super(SIS, self).__init__()
+
     @tf.function
     def deriv(self, x, y, theta_E, center_x, center_y):
         x, y = x - center_x, y - center_y

@@ -8,6 +8,9 @@ class Shear(MassProfile):
     _name = "SHEAR"
     _params = ["gamma1", "gamma2"]
 
+    def __init__(self):
+        super(Shear, self).__init__()
+
     @tf.function
     def deriv(self, x, y, gamma1, gamma2):
         return gamma1 * x + gamma2 * y, gamma2 * x - gamma1 * y

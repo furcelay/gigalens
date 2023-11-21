@@ -9,6 +9,9 @@ class NFW(MassProfile):
     _r_min = 0.0000001
     _c = 0.000001
 
+    def __init__(self):
+        super(NFW, self).__init__()
+
     @tf.function
     def deriv(self, x, y, Rs, alpha_Rs, center_x, center_y):
         rho0 = alpha_Rs / (4. * Rs ** 2 * (1. - tf.math.log(2.)))
