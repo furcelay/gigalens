@@ -31,7 +31,7 @@ class DPIS(MassProfile):
     def deriv(self, x, y, E0, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
-        r2 = x**2 + y**2  # r2 instead of dividing by r twice
+        r2 = x ** 2 + y ** 2  # r2 instead of dividing by r twice
         scale = E0 * r_cut / (r_cut - r_core)
         alpha_r = scale / r2 * self._f_A20(r2, r_core, r_cut)
         f_x = alpha_r * x
@@ -43,7 +43,7 @@ class DPIS(MassProfile):
         """
         Faster and equiv to equation A20 * r in Eliasdottir (2007), (see Golse PhD)
         """
-        return tf.math.sqrt(r2 + r_core**2) - r_core - tf.math.sqrt(r2 + r_cut**2) + r_cut
+        return tf.math.sqrt(r2 + r_core ** 2) - r_core - tf.math.sqrt(r2 + r_cut ** 2) + r_cut
 
     @tf.function
     def _sort_ra_rs(self, r_core, r_cut):
@@ -92,7 +92,6 @@ class DPIS(MassProfile):
 
 
 class DPIE(MassProfile):
-
     _name = "dPIE"
     _params = ['E0', 'r_core', 'r_cut', 'center_x', 'center_y', 'e1', 'e2']
 
@@ -113,6 +112,7 @@ class DPIE(MassProfile):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         scale = E0 * r_cut / (r_cut - r_core)
         alpha_x, alpha_y = self.complex_deriv_dual(x, y, r_core, r_cut, e, q)
+        alpha_x, alpha_y = self._rotate(alpha_x, alpha_y, -phi)
         return scale * alpha_x, scale * alpha_y
 
     @tf.function
@@ -129,9 +129,9 @@ class DPIE(MassProfile):
         f_xx_core, f_xy_core, f_yy_core = self.complex_hessian_single(x, y, r_core, e, q)
         f_xx_cut, f_xy_cut, f_yy_cut = self.complex_hessian_single(x, y, r_cut, e, q)
         f_xx = scale * (f_xx_core - f_xx_cut)
-        f_xy = scale * (f_xx_core - f_xx_cut)
-        f_yx = f_xy
+        f_xy = f_yx = scale * (f_xy_core - f_xy_cut)
         f_yy = scale * (f_yy_core - f_yy_cut)
+        f_xx, f_xy, f_yx, f_yy = self._hessian_rotate(f_xx, f_xy, f_yx, f_yy, -phi)
         return f_xx, f_xy, f_yx, f_yy
 
     @tf.function
@@ -142,7 +142,7 @@ class DPIE(MassProfile):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         scale = E0 * r_cut / (r_cut - r_core)
         rem2 = x ** 2 / (1. + e) ** 2 + y ** 2 / (1. - e) ** 2
-        kappa = scale / 2 * (1 / tf.math.sqrt(rem2 + r_core**2) - 1 / tf.math.sqrt(rem2 + r_cut**2))
+        kappa = scale / 2 * (1 / tf.math.sqrt(rem2 + r_core ** 2) - 1 / tf.math.sqrt(rem2 + r_cut ** 2))
         return kappa
 
     @tf.function
@@ -150,6 +150,32 @@ class DPIE(MassProfile):
         cos_phi = tf.cos(phi, name=self.name + "rotate-cos")
         sin_phi = tf.sin(phi, name=self.name + "rotate-sin")
         return x * cos_phi + y * sin_phi, -x * sin_phi + y * cos_phi
+
+    @tf.function
+    def _hessian_rotate(self, f_xx, f_xy, f_yx, f_yy, phi):
+        """
+         rotation matrix
+         R = | cos(t) -sin(t) |
+             | sin(t)  cos(t) |
+
+        Hessian matrix
+        H = | fxx  fxy |
+            | fxy  fyy |
+
+        returns R H R^T
+
+        """
+        cos_2phi = tf.cos(2 * phi, name=self.name + "rotate-cos")
+        sin_2phi = tf.sin(2 * phi, name=self.name + "rotate-sin")
+        a = 1 / 2 * (f_xx + f_yy)
+        b = 1 / 2 * (f_xx - f_yy) * cos_2phi
+        c = f_xy * sin_2phi
+        d = f_xy * cos_2phi
+        e = 1 / 2 * (f_xx - f_yy) * sin_2phi
+        f_xx_rot = a + b + c
+        f_xy_rot = f_yx_rot = d - e
+        f_yy_rot = a - b - c
+        return f_xx_rot, f_xy_rot, f_yx_rot, f_yy_rot
 
     @tf.function
     def _param_conv(self, e1, e2):
@@ -185,7 +211,7 @@ class DPIE(MassProfile):
 
         # r_cut: zsi_rcut = (a + ei)/(c + fi)
         # znum_rcut_re = znum_rc_re  # a
-        znum_rcut_im = 2. * sqe * tf.math.sqrt(r_cut * r_cut + rem2) - y / q  # e
+        znum_rcut_im = 2. * sqe * tf.math.sqrt(r_cut ** 2 + rem2) - y / q  # e
         # zden_rcut_re = zden_rc_re  # c
         zden_rcut_im = 2. * r_cut * sqe - y  # f
 
@@ -211,12 +237,12 @@ class DPIE(MassProfile):
 
         # zis_rc / zis_rcut = ((aa * cc + bb * dd) / norm) + ((bb * cc - aa * dd) / norm) * I
         # zis_rc / zis_rcut = aaa + bbb * I
-        norm = (cc * cc + dd * dd)
+        norm = (cc ** 2 + dd ** 2)
         aaa = (aa * cc + bb * dd) / norm
         bbb = (bb * cc - aa * dd) / norm
 
         # compute the zr = log(zis_rc / zis_rcut) = log(aaa + bbb * I)
-        norm2 = aaa * aaa + bbb * bbb
+        norm2 = aaa ** 2 + bbb ** 2
         zr_re = tf.math.log(tf.math.sqrt(norm2))
         zr_im = tf.math.atan2(bbb, aaa)
 
@@ -231,8 +257,9 @@ class DPIE(MassProfile):
         qinv = 1. / q
         cxro = (1. + e) * (1. + e)  # rem ^ 2 = x ^ 2 / (1 + e ^ 2) + y ^ 2 / (1 - e ^ 2) Eq 2.3.6
         cyro = (1. - e) * (1. - e)
-        ci = 0.5 * (1. - e**2) / sqe
-        wrem = tf.math.sqrt(r_w**2 + x**2 / cxro + y**2 / cyro)  # wrem ^ 2 = r_w ^ 2 + rem ^ 2 with r_w core radius
+        ci = 0.5 * (1. - e ** 2) / sqe
+        wrem = tf.math.sqrt(
+            r_w ** 2 + x ** 2 / cxro + y ** 2 / cyro)  # wrem ^ 2 = r_w ^ 2 + rem ^ 2 with r_w core radius
         """
         zden = cpx(x, (2. * r_w * sqe - y)) # denominator
         znum = cpx(q * x, (2. * sqe * wrem - y / q)) # numerator
@@ -252,18 +279,18 @@ class DPIE(MassProfile):
         res.c = b0 * zdidy.im
         """
         den1 = 2. * sqe * wrem - y * qinv
-        den1 = q**2 * x**2 + den1**2
+        den1 = q ** 2 * x ** 2 + den1 ** 2
         num2 = 2. * r_w * sqe - y
-        den2 = x**2 + num2**2
-    
-        didxre = ci * (q * (2. * sqe * x**2 / cxro / wrem - 2. * sqe * wrem + y * qinv) / den1 + num2 / den2)
-        
+        den2 = x ** 2 + num2 ** 2
+
+        didxre = ci * (q * (2. * sqe * x ** 2 / cxro / wrem - 2. * sqe * wrem + y * qinv) / den1 + num2 / den2)
+
         # didxim = ci * ((2 * sqe * x * y * qinv / cxro / wrem - q * q * x - 4 * e * x / cxro) / den1 + x / den2)
         didyre = ci * ((2 * sqe * x * y * q / cyro / wrem - x) / den1 + x / den2)
-        
-        didyim = ci * ((2 * sqe * wrem * qinv - y * qinv**2 - 4 * e * y / cyro +
-                        2 * sqe * y**2 / cyro / wrem * qinv) / den1 - num2 / den2)
-        
+
+        didyim = ci * ((2 * sqe * wrem * qinv - y * qinv ** 2 - 4 * e * y / cyro +
+                        2 * sqe * y ** 2 / cyro / wrem * qinv) / den1 - num2 / den2)
+
         f_xx = didxre
         f_xy = didyre  # (didyre + didxim) / 2.
         f_yy = didyim
