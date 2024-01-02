@@ -8,7 +8,17 @@ class MassProfile(gigalens.profile.MassProfile, ABC):
 
     @tf.function
     def hessian(self, x, y, **kwargs):
-        # use autograd to compute derivatives
+        """Calculates hessian with autograd.
+
+                Args:
+                    x: :math:`x` coordinate at which to evaluate the deflection
+                    y: :math:`y` coordinate at which to evaluate the deflection
+                    **kwargs: Mass profile parameters. Each parameter must be shaped in a way that is broadcastable with x and y
+
+                Returns:
+                    A tuple :math:`(\\alpha_x, \\alpha_y)` containing the deflection angle in the :math:`x` and :math:`y` directions
+
+        """
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as tape:
             tape.watch(x)
             tape.watch(y)

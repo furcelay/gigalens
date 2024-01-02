@@ -11,7 +11,7 @@ class Parameterized(ABC):
     """
 
     _name: str  # Static class level default for name
-    _params: List[str]  # # Static class level default for parameter names
+    _params: List[str]  # Static class level default for parameter names
 
     def __init__(self, *args, **kwargs):
         self.name = self._name
