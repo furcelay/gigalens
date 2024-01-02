@@ -1,0 +1,21 @@
+from typing import List, Dict
+from gigalens.tf.profiles.mass.scaling_relation import ScalingRelation
+from gigalens.tf.profiles.mass.piemd import DPIE
+
+
+class DPIESubhalo(ScalingRelation):
+
+    def __init__(self,
+                 lum_star: float,
+                 galaxy_catalogue: Dict[str, List],
+                 scaling_params_power=None,
+                 **kwargs):
+        if scaling_params_power is None:
+            scaling_params_power = {'E0': 0.5, 'r_core': 0.5, 'r_cut': 0.5}
+
+        super(DPIESubhalo, self).__init__(profile=DPIE(),
+                                          scaling_params=['E0', 'r_core', 'r_cut'],
+                                          lum_star=lum_star,
+                                          scaling_params_power=scaling_params_power,
+                                          galaxy_catalogue=galaxy_catalogue,
+                                          **kwargs)
