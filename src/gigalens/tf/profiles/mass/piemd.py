@@ -5,16 +5,16 @@ from gigalens.tf.profile import MassProfile
 Dual Pseudo Isothermal Elliptical Mass Profile (dPIEMS or dPIE)
 Composed of two PIE from Kassiola & Kovner (1993) similar (but not equal) to Elíasdóttir (2007)
 
-Complex deflection: J = alpha_x + i alpha_y = E0 * r_cut / (r_cut - r_core) * (I_cut - I_core)
+Complex deflection: J = alpha_x + i alpha_y = theta_E * r_cut / (r_cut - r_core) * (I_cut - I_core)
 with I_w from Kassiola & Kovner (1993) eq. 4.1.2 replacing w by r_core or r_cut
 
-Convergence: k = E0 * r_cut / (r_cut - r_core) * (1 / sqrt(r^2 + r_core^2) - 1 / sqrt(r^2 + r_cut^2))
-Central convergence: k0 = E0 / (2 r_core)
+Convergence: k = theta_E * r_cut / (r_cut - r_core) * (1 / sqrt(r^2 + r_core^2) - 1 / sqrt(r^2 + r_cut^2))
+Central convergence: k0 = theta_E / (2 r_core)
 
 Velocity dispersion equivalence:
-Lenstool:           E0 = 6 pi (D_LS / D_S) (simga_v(Ls) / c)^2
-Limousin (2005):    E0 = 4 pi (D_LS / D_S) (simga_v(Li) / c)^2
-Elíasdóttir (2007): E0 = 6 pi (D_LS / D_S) (simga_v(El) / c)^2 * r_cut^2 / (r_cut^2 - r_core^2)
+Lenstool:           theta_E = 6 pi (D_LS / D_S) (simga_v(Ls) / c)^2
+Limousin (2005):    theta_E = 4 pi (D_LS / D_S) (simga_v(Li) / c)^2
+Elíasdóttir (2007): theta_E = 6 pi (D_LS / D_S) (simga_v(El) / c)^2 * r_cut^2 / (r_cut^2 - r_core^2)
 """
 
 
@@ -24,18 +24,18 @@ class DPIS(MassProfile):
     """
 
     _name = "dPIS"
-    _params = ['E0', 'r_core', 'r_cut', 'center_x', 'center_y']
+    _params = ['theta_E', 'r_core', 'r_cut', 'center_x', 'center_y']
     _r_min = 0.0001
 
     def __init__(self,):
         super(DPIS, self).__init__()
 
     @tf.function
-    def deriv(self, x, y, E0, r_core, r_cut, center_x, center_y):
+    def deriv(self, x, y, theta_E, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
         r2 = x ** 2 + y ** 2  # r2 instead of dividing by r twice
-        scale = E0 * r_cut / (r_cut - r_core)
+        scale = theta_E * r_cut / (r_cut - r_core)
         alpha_r = scale / r2 * self._f_A20(r2, r_core, r_cut)
         f_x = alpha_r * x
         f_y = alpha_r * y
@@ -60,12 +60,12 @@ class DPIS(MassProfile):
         return r_core, r_cut
 
     @tf.function
-    def hessian(self, x, y, E0, r_core, r_cut, center_x, center_y):
+    def hessian(self, x, y, theta_E, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
         r = tf.math.sqrt(x ** 2 + y ** 2)
         r = tf.math.maximum(self._r_min, r)
-        scale = E0 * r_cut / (r_cut - r_core)
+        scale = theta_E * r_cut / (r_cut - r_core)
         gamma = scale / 2 * (
                 2 * (1. / (r_core + tf.math.sqrt(r_core ** 2 + r ** 2))
                      - 1. / (r_cut + tf.math.sqrt(r_cut ** 2 + r ** 2))) -
@@ -83,12 +83,12 @@ class DPIS(MassProfile):
         return f_xx, f_xy, f_xy, f_yy
 
     @tf.function
-    def convergence(self, x, y, E0, r_core, r_cut, center_x=0, center_y=0):
+    def convergence(self, x, y, theta_E, r_core, r_cut, center_x=0, center_y=0):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
         r = tf.math.sqrt(x ** 2 + y ** 2)
         r = tf.math.maximum(self._r_min, r)
-        scale = E0 * r_cut / (r_cut - r_core)
+        scale = theta_E * r_cut / (r_cut - r_core)
         kappa = scale / 2 * (r_core + r_cut) / r_cut * (
                 1 / tf.math.sqrt(r_core ** 2 + r ** 2) - 1 / tf.math.sqrt(r_cut ** 2 + r ** 2))
         return kappa
@@ -96,14 +96,14 @@ class DPIS(MassProfile):
 
 class DPIE(MassProfile):
     _name = "dPIE"
-    _params = ['E0', 'r_core', 'r_cut', 'center_x', 'center_y', 'e1', 'e2']
+    _params = ['theta_E', 'r_core', 'r_cut', 'center_x', 'center_y', 'e1', 'e2']
     _r_min = 0.0001
 
     def __init__(self):
         super(DPIE, self).__init__()
 
     @tf.function
-    def deriv(self, x, y, E0, r_core, r_cut, e1, e2, center_x=0, center_y=0):
+    def deriv(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x=0, center_y=0):
         """
         Same as Lenstool implementation of Kassiola & Kovner, 1993 PIEMD, paragraph 4.1
         but with r_cut = s from Eliasdottir (2007)
@@ -113,13 +113,13 @@ class DPIE(MassProfile):
         x, y = x - center_x, y - center_y
         x, y = self._rotate(x, y, phi)
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
-        scale = E0 * r_cut / (r_cut - r_core)
+        scale = theta_E * r_cut / (r_cut - r_core)
         alpha_x, alpha_y = self.complex_deriv_dual(x, y, r_core, r_cut, e, q)
         alpha_x, alpha_y = self._rotate(alpha_x, alpha_y, -phi)
         return scale * alpha_x, scale * alpha_y
 
     @tf.function
-    def hessian(self, x, y, E0, r_core, r_cut, e1, e2, center_x=0, center_y=0):
+    def hessian(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x=0, center_y=0):
         """
         Same as Lenstool implementation of Kassiola & Kovner, 1993 PIEMD, paragraph 4.1
         but with r_cut = s from Eliasdottir (2007)
@@ -128,7 +128,7 @@ class DPIE(MassProfile):
         x, y = x - center_x, y - center_y
         x, y = self._rotate(x, y, phi)
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
-        scale = E0 * r_cut / (r_cut - r_core)
+        scale = theta_E * r_cut / (r_cut - r_core)
         f_xx_core, f_xy_core, f_yy_core = self.complex_hessian_single(x, y, r_core, e, q)
         f_xx_cut, f_xy_cut, f_yy_cut = self.complex_hessian_single(x, y, r_cut, e, q)
         f_xx = scale * (f_xx_core - f_xx_cut)

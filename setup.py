@@ -23,6 +23,7 @@ test_deps = [
 extras = {
     "test": test_deps,
     "jax": jax_deps,
+    "codegen": ["sympy"],
 }
 
 setup(

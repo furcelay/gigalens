@@ -48,7 +48,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
         self.include_pixels = include_pixels
         self.include_positions = include_positions
-        self.use_magnification = use_magnification
 
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)

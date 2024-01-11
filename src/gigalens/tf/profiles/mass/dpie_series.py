@@ -1,5 +1,5 @@
 import tensorflow as tf
-from gigalens.tf.series.dpie_deflection_series import deflection_fns
+from gigalens.tf.series.profiles.dpie import deriv_fns, hessian_fns
 from gigalens.tf.series.series_profile import MassSeries
 
 
@@ -7,18 +7,18 @@ class DPIESeries(MassSeries):
     """
     Series expansion of the given potential on a single variable
     """
-    _params = ['r_cut', 'E0']
+    _params = ['r_cut', 'theta_E']
     _constants = ['r_core', 'center_x', 'center_y', 'e1', 'e2']
     _series_param = 'r_cut'
-    _scale_param = 'E0'
+    _scale_param = 'theta_E'
     _name = "SeriesExpansion-dPIE"
 
     def __init__(self, order=3):
         super(DPIESeries, self).__init__(order)
 
     @tf.function
-    def precompute_deriv(self, x, y, E0, r_core, r_cut, e1, e2, center_x, center_y):
-        # E0 is not used
+    def precompute_deriv(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
+        # theta_E is not used
         e, q, phi = self._param_conv(e1, e2)
         x, y = x - center_x, y - center_y
         x, y = self._rotate(x, y, phi)

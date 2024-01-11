@@ -11,10 +11,10 @@ class DPIESubhalo(ScalingRelation):
                  scaling_params_power=None,
                  **kwargs):
         if scaling_params_power is None:
-            scaling_params_power = {'E0': 0.5, 'r_core': 0.5, 'r_cut': 0.5}
+            scaling_params_power = {'theta_E': 0.5, 'r_core': 0.5, 'r_cut': 0.5}
 
         super(DPIESubhalo, self).__init__(profile=DPIE(),
-                                          scaling_params=['E0', 'r_core', 'r_cut'],
+                                          scaling_params=['theta_E', 'r_core', 'r_cut'],
                                           lum_star=lum_star,
                                           scaling_params_power=scaling_params_power,
                                           galaxy_catalogue=galaxy_catalogue,

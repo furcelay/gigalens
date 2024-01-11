@@ -16,9 +16,9 @@ class MassProfile(gigalens.profile.MassProfile, ABC):
                     **kwargs: Mass profile parameters. Each parameter must be shaped in a way that is broadcastable with x and y
 
                 Returns:
-                    A tuple :math:`(\\alpha_x, \\alpha_y)` containing the deflection angle in the :math:`x` and :math:`y` directions
-
+                    A tuple :math:`(\\f_xx, \\f_xy, \\f_yx, \\f_yy)` containing the hessian matrix in the :math:`x` and :math:`y` directions
         """
+
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as tape:
             tape.watch(x)
             tape.watch(y)

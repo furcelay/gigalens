@@ -15,6 +15,7 @@ class Shear(MassProfile):
     def deriv(self, x, y, gamma1, gamma2):
         return gamma1 * x + gamma2 * y, gamma2 * x - gamma1 * y
 
+    @tf.function
     def hessian(self, x, y, gamma1, gamma2, ra_0=0, dec_0=0):
         gamma1 = gamma1
         gamma2 = gamma2
