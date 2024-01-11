@@ -283,7 +283,7 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
         )
 
 
-class TFPhysicalModel(gigalens.model.PhysicalModel):
+class PhysicalModel(gigalens.model.PhysicalModel):
     """A physical model for the lensing system.
 
     Args:
@@ -306,8 +306,8 @@ class TFPhysicalModel(gigalens.model.PhysicalModel):
         lens_light_constants: List[Dict] = None,
         source_light_constants: List[Dict] = None,
     ):
-        super(TFPhysicalModel, self).__init__(lenses, lens_light, source_light,
-                                              lenses_constants, lens_light_constants, source_light_constants)
+        super(PhysicalModel, self).__init__(lenses, lens_light, source_light,
+                                            lenses_constants, lens_light_constants, source_light_constants)
         self.lenses_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                  for d in self.lenses_constants]
         self.lens_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
