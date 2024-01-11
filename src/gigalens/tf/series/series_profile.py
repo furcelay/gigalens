@@ -50,7 +50,7 @@ class MassSeries(MassProfile, ABC):
 
     def hessian(self, x, y, **kwargs):
         var = kwargs[self.series_param]
-        scale = kwargs[self.scale_param] / 2
+        scale = kwargs[self.scale_param]
         f_xx_series, f_xy_series, f_yy_series = self.get_cached_hessian(x, y)
         f_xx = self._evaluate_series(var, f_xx_series)
         f_xy = self._evaluate_series(var, f_xy_series)

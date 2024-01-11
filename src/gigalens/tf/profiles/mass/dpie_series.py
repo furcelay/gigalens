@@ -24,7 +24,7 @@ class DPIESeries(MassSeries):
         x, y = self._rotate(x, y, phi)
         f_x, f_y = [], []
         for i in range(self.order + 1):
-            f_x_i, f_y_i = deflection_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
+            f_x_i, f_y_i = deriv_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
             f_x_i, f_y_i = self._rotate(f_x_i, f_y_i, -phi)
             f_x.append(f_x_i)
             f_y.append(f_y_i)
@@ -32,8 +32,20 @@ class DPIESeries(MassSeries):
         return f_x, f_y
 
     @tf.function
-    def precompute_hessian(self, x, y, E0, r_core, r_cut, e1, e2, center_x, center_y):
-        pass
+    def precompute_hessian(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
+        # theta_E is not used
+        e, q, phi = self._param_conv(e1, e2)
+        x, y = x - center_x, y - center_y
+        x, y = self._rotate(x, y, phi)
+        f_xx, f_xy, f_yy = [], [], []
+        for i in range(self.order + 1):
+            f_xx_i, f_xy_i, f_yy_i = hessian_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
+            f_xx_i, f_xy_i, f_yy_i = self._hessian_rotate(f_xx_i, f_xy_i, f_yy_i, -phi)
+            f_xx.append(f_xx_i)
+            f_xy.append(f_xy_i)
+            f_yy.append(f_yy_i)
+        f_xx, f_xy, f_yy = tf.stack(f_xx, axis=-1), tf.stack(f_xy, axis=-1), tf.stack(f_yy, axis=-1)  # x, y, batch, (n+1)
+        return f_xx, f_xy, f_yy
 
     @tf.function
     def _param_conv(self, e1, e2):
@@ -47,3 +59,29 @@ class DPIESeries(MassSeries):
         cos_phi = tf.cos(phi, name=self.name + "rotate-cos")
         sin_phi = tf.sin(phi, name=self.name + "rotate-sin")
         return x * cos_phi + y * sin_phi, -x * sin_phi + y * cos_phi
+
+    @tf.function
+    def _hessian_rotate(self, f_xx, f_xy, f_yy, phi):
+        """
+         rotation matrix
+         R = | cos(t) -sin(t) |
+             | sin(t)  cos(t) |
+
+        Hessian matrix
+        H = | fxx  fxy |
+            | fxy  fyy |
+
+        returns R H R^T
+
+        """
+        cos_2phi = tf.cos(2 * phi, name=self.name + "rotate-cos")
+        sin_2phi = tf.sin(2 * phi, name=self.name + "rotate-sin")
+        a = 1 / 2 * (f_xx + f_yy)
+        b = 1 / 2 * (f_xx - f_yy) * cos_2phi
+        c = f_xy * sin_2phi
+        d = f_xy * cos_2phi
+        e = 1 / 2 * (f_xx - f_yy) * sin_2phi
+        f_xx_rot = a + b + c
+        f_xy_rot = f_yx_rot = d - e
+        f_yy_rot = a - b - c
+        return f_xx_rot, f_xy_rot, f_yy_rot
