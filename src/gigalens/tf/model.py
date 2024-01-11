@@ -41,8 +41,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         centroids_errors_x=None,
         centroids_errors_y=None,
         include_pixels=True,
-        include_positions=True,
-        use_magnification=False,
+        include_positions=True
     ):
         super(ForwardProbModel, self).__init__(prior)
 
@@ -117,10 +116,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
             beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
 
-            if self.use_magnification:
-                magnifications = simulator.magnification(cx, cy, params['lens_mass'])
-            else:
-                magnifications = tf.ones_like(cx, dtype=tf.float32)
+            magnifications = simulator.magnification(cx, cy, params['lens_mass'])
             magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
 
             err_map = tf.stack([cex / magnifications, cey / magnifications],
