@@ -14,7 +14,7 @@ class DPIESeries(MassSeries):
     _name = "SeriesExpansion-dPIE"
 
     def __init__(self, order=3):
-        super(DPIESeries, self).__init__(order)
+        super(DPIESeries, self).__init__(order=order)
 
     @tf.function
     def precompute_deriv(self, order, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
