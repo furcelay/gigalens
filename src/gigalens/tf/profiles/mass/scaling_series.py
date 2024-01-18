@@ -10,7 +10,7 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
 
     def __init__(self, profile: MassSeries, **kwargs):
         self._series_param = profile.series_param
-        self._scale_param = profile.scale_param
+        self._amplitude_param = profile.amplitude_param
         super(ScalingRelationSeries, self).__init__(profile=profile, **kwargs)
 
         self.params = self._params = self.profile.params
@@ -22,7 +22,7 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
         scaled = self.scale_params(scales)
         n = tf.range(order + 1, dtype=tf.float32)
         for s_chunk, u_chunk, c_chunk in zip(scaled, self._unscaled_params, self._galaxy_constants):
-            scale_factor = tf.expand_dims(u_chunk[self.scale_param], 0)
+            scale_factor = tf.expand_dims(u_chunk[self.amplitude_param], 0)
             scale_factor = tf.expand_dims(scale_factor, -1)  # 1, chunk, 1
             series_factor = tf.expand_dims(u_chunk[self.series_param], 0)
             series_factor = tf.expand_dims(series_factor, -1)
@@ -39,7 +39,7 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
         scaled = self.scale_params(scales)
         n = tf.range(order + 1, dtype=tf.float32)
         for s_chunk, u_chunk, c_chunk in zip(scaled, self._unscaled_params, self._galaxy_constants):
-            scale_factor = tf.expand_dims(u_chunk[self.scale_param], 0)
+            scale_factor = tf.expand_dims(u_chunk[self.amplitude_param], 0)
             scale_factor = tf.expand_dims(scale_factor, -1)  # 1, chunk, 1
             series_factor = tf.expand_dims(u_chunk[self.series_param], 0)
             series_factor = tf.expand_dims(series_factor, -1)

@@ -12,13 +12,13 @@ class MassSeries(MassProfile, ABC):
     """
 
     _series_param: str
-    _scale_param: str
+    _amplitude_param: str
     _name = "SeriesExpansion"
     _constants = []
 
     def __init__(self, grid=(None, None), params=None, order=3, **kwargs):
         self.series_param = self._series_param
-        self.scale_param = self._scale_param
+        self.amplitude_param = self._amplitude_param
         self._series_var_0 = None
         self.constants = self._constants
         self._order = order
@@ -73,7 +73,7 @@ class MassSeries(MassProfile, ABC):
         pass
 
     def deriv(self, x, y, **kwargs):
-        scale = kwargs.pop(self.scale_param)
+        scale = kwargs.pop(self.amplitude_param)
         if tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y):
             # use cached deriv
             var = kwargs[self.series_param]
@@ -85,7 +85,7 @@ class MassSeries(MassProfile, ABC):
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
-        scale = kwargs.pop(self.scale_param)
+        scale = kwargs.pop(self.amplitude_param)
         if tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y):
             # use cached hessian
             var = kwargs[self.series_param]

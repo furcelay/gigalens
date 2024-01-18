@@ -10,7 +10,7 @@ class DPIESeries(MassSeries):
     _params = ['r_cut', 'theta_E']
     _constants = ['r_core', 'center_x', 'center_y', 'e1', 'e2']
     _series_param = 'r_cut'
-    _scale_param = 'theta_E'
+    _amplitude_param = 'theta_E'
     _name = "SeriesExpansion-dPIE"
 
     def __init__(self, order=3):
