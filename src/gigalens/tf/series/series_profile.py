@@ -16,7 +16,7 @@ class MassSeries(MassProfile, ABC):
     _name = "SeriesExpansion"
     _constants = []
 
-    def __init__(self, params=None, order=3, **kwargs):
+    def __init__(self, grid=(None, None), params=None, order=3, **kwargs):
         self.series_param = self._series_param
         self.scale_param = self._scale_param
         self._series_var_0 = None
@@ -26,9 +26,9 @@ class MassSeries(MassProfile, ABC):
         if params is not None:
             self._constants_dict = params.copy()
             self._series_var_0 = params[self.series_param]
+        self._x, self._y = grid
         self._f_x, self._f_y = None, None
         self._f_xx, self._f_xy, self._f_yy = None, None, None
-        self._x, self._y = None, None
         super(MassSeries, self).__init__(**kwargs)
 
     @property
