@@ -16,45 +16,85 @@ class MassSeries(MassProfile, ABC):
     _name = "SeriesExpansion"
     _constants = []
 
-    def __init__(self, order=3, **kwargs):
+    def __init__(self, params=None, order=3, **kwargs):
         self.series_param = self._series_param
         self.scale_param = self._scale_param
-        self.series_var_0 = tf.constant(0, dtype=tf.float32)
+        self._series_var_0 = None
         self.constants = self._constants
-        self.order = order
-        self.constants_dict = {}
-        self.deriv_cache = {}
-        self.hessian_cache = {}
+        self._order = order
+        self._constants_dict = {}
+        if params is not None:
+            self._constants_dict = params.copy()
+            self._series_var_0 = params[self.series_param]
+        self._f_x, self._f_y = None, None
+        self._f_xx, self._f_xy, self._f_yy = None, None, None
+        self._x, self._y = None, None
         super(MassSeries, self).__init__(**kwargs)
 
+    @property
+    def order(self):
+        return self._order
+
+    @property
+    def series_var_0(self):
+        return self._series_var_0
+
+    @property
+    def x(self):
+        return self._x
+
+    @property
+    def y(self):
+        return self._y
+
+    @property
+    def constants_dict(self):
+        return self._constants_dict
+
     def set_constants(self, params):
-        self.series_var_0 = params[self.series_param]
-        self.constants_dict = params.copy()
-        self.clear_cache()
+        self._series_var_0 = params[self.series_param]
+        self._constants_dict = params.copy()
+
+    def set_grid(self, x, y):
+        self._x, self._y = x, y
+
+    def set_deriv(self):
+        self._f_x, self._f_y = self.precompute_deriv(self.order, self.x, self.y, **self.constants_dict)
+
+    def set_hessian(self):
+        self._f_xx, self._f_xy, self._f_yy = self.precompute_hessian(self.order, self.x, self.y, **self.constants_dict)
 
     @abstractmethod
-    def precompute_deriv(self, x, y, **kwargs):
+    def precompute_deriv(self, order, x, y, **kwargs):
         pass
 
     @abstractmethod
-    def precompute_hessian(self, x, y, **kwargs):
+    def precompute_hessian(self, order, x, y, **kwargs):
         pass
 
     def deriv(self, x, y, **kwargs):
-        var = kwargs[self.series_param]
-        scale = kwargs[self.scale_param]
-        f_x_series, f_y_series = self.get_cached_deriv(x, y)
-        f_x = self._evaluate_series(var, f_x_series)
-        f_y = self._evaluate_series(var, f_y_series)
+        scale = kwargs.pop(self.scale_param)
+        if tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y):
+            # use cached deriv
+            var = kwargs[self.series_param]
+            f_x = self._evaluate_series(var, self._f_x)
+            f_y = self._evaluate_series(var, self._f_y)
+        else:
+            # comopute order 0 with new values
+            f_x, f_y = self.precompute_deriv(0, x, y, **kwargs)
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
-        var = kwargs[self.series_param]
-        scale = kwargs[self.scale_param]
-        f_xx_series, f_xy_series, f_yy_series = self.get_cached_hessian(x, y)
-        f_xx = self._evaluate_series(var, f_xx_series)
-        f_xy = self._evaluate_series(var, f_xy_series)
-        f_yy = self._evaluate_series(var, f_yy_series)
+        scale = kwargs.pop(self.scale_param)
+        if tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y):
+            # use cached hessian
+            var = kwargs[self.series_param]
+            f_xx = self._evaluate_series(var, self._f_xx)
+            f_xy = self._evaluate_series(var, self._f_xy)
+            f_yy = self._evaluate_series(var, self._f_yy)
+        else:
+            # comopute order 0 with new values
+            f_xx, f_xy, f_yy = self.precompute_hessian(0, x, y, **kwargs)
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
@@ -63,28 +103,3 @@ class MassSeries(MassProfile, ABC):
         fact = tf.exp(tf.math.lgamma(n + 1))
         powers = tf.math.pow((tf.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return tf.reduce_sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
-
-    def get_cached_deriv(self, x, y):
-        ref = hash((x.ref(), y.ref()))
-        if ref in self.deriv_cache:
-            return self.deriv_cache[ref]
-        else:
-            value = self.precompute_deriv(x, y, **self.constants_dict)
-            self.deriv_cache[ref] = value
-            return value
-
-    def get_cached_hessian(self, x, y):
-        ref = hash((x.ref(), y.ref()))
-        if ref in self.hessian_cache:
-            # use precomputed value
-            # must be always the same tensors (not only the same values)
-            return self.hessian_cache[ref]
-        else:
-            # compute and save in chache
-            value = self.precompute_hessian(x, y, **self.constants_dict)
-            self.hessian_cache[ref] = value
-            return value
-
-    def clear_cache(self):
-        self.deriv_cache = {}
-        self.hessian_cache = {}
