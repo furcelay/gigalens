@@ -138,12 +138,12 @@ class DPIE(MassProfile):
         return f_xx, f_xy, f_yx, f_yy
 
     @tf.function
-    def convergence(self, x, y, E0, r_core, r_cut, e1, e2, center_x=0, center_y=0):
+    def convergence(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x=0, center_y=0):
         e, q, phi = self._param_conv(e1, e2)
         x, y = x - center_x, y - center_y
         x, y = self._rotate(x, y, phi)
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
-        scale = E0 * r_cut / (r_cut - r_core)
+        scale = theta_E * r_cut / (r_cut - r_core)
         rem2 = x ** 2 / (1. + e) ** 2 + y ** 2 / (1. - e) ** 2
         kappa = scale / 2 * (1 / tf.math.sqrt(rem2 + r_core ** 2) - 1 / tf.math.sqrt(rem2 + r_cut ** 2))
         return kappa
