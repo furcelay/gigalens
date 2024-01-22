@@ -61,7 +61,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             kernel = subgrid_kernel(
                 sim_config.kernel, sim_config.supersample, odd=True
             )[::-1, ::-1, jnp.newaxis, jnp.newaxis]
-            self.kernel = jnp.repeat(kernel, self.depth, axis=2)
+            self.kernel = jnp.repeat(jnp.array(kernel), self.depth, axis=2)
             self.flat_kernel = jnp.transpose(kernel, (2, 3, 0, 1))
 
     @functools.partial(jit, static_argnums=(0,))

@@ -38,9 +38,9 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             bs=n_samples // dev_cnt,
         )
 
-        event_size = jnp.zeros(1)
+        event_size = jnp.array(0)
         if self.prob_model.include_pixels:
-            event_size += jnp.size(lens_sim.img_region)
+            event_size += jnp.count_nonzero(lens_sim.img_region)
         if self.prob_model.include_positions:
             event_size += self.prob_model.n_position
 
@@ -51,7 +51,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             if start is None
             else start
         )
-        params = jnp.stack(self.prob_model.bij.inverse(start)).T
+        params = self.prob_model.bij.inverse(start)
 
         opt_state = optimizer.init(params)
 
