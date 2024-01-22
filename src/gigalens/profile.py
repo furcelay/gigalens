@@ -31,12 +31,15 @@ class LightProfile(Parameterized, ABC):
          _use_lstsq (bool): Whether to use least squares to solve for linear parameters
     """
 
+    _amp = ""
+
     def __init__(self, use_lstsq=False, *args, **kwargs):
         super(LightProfile, self).__init__(*args, **kwargs)
         self._use_lstsq = use_lstsq
         self.depth = 1
-        if self.use_lstsq:
-            self.params.append("amp")
+        self.params.append("deflection_ratio")
+        if not self.use_lstsq:
+            self.params.append(self._amp)
 
     @property
     def use_lstsq(self):
@@ -78,3 +81,4 @@ class MassProfile(Parameterized, ABC):
 
         """
         pass
+
