@@ -4,6 +4,7 @@ import numpy as np
 from jax import jit
 from jax import numpy as jnp
 from jax import random
+from jax.tree_util import tree_flatten
 from tensorflow_probability.substrates.jax import distributions as tfd, bijectors as tfb
 
 from typing import List, Dict
@@ -57,13 +58,17 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.n_position = 2 * jnp.size(jnp.concatenate(self.centroids_x, axis=0))
 
         example = prior.sample(seed=random.PRNGKey(0))
-        self.pack_bij = tfb.pack_sequence_as(example)
-        self.bij = tfb.Chain(
+        size = int(jnp.size(tree_flatten(example)[0]))
+        self.pack_bij = tfb.Chain(
             [
-                prior.experimental_default_event_space_bijector(),
-                self.pack_bij,
+                tfb.pack_sequence_as(example),
+                tfb.Split(size),
+                tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
+                tfb.Transpose(perm=(1, 0)),
             ]
         )
+        self.unconstraining_bij = prior.experimental_default_event_space_bijector()
+        self.bij = tfb.Chain([self.unconstraining_bij, self.pack_bij])
 
     @functools.partial(jit, static_argnums=(0, 1))
     def stats_pixels(self, simulator: sim.LensSimulator, params):
@@ -112,7 +117,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         log_like, red_chi2 = jnp.zeros(z.shape[0]), jnp.zeros(z.shape[0])
         n_chi = 0
 
-        z = list(z.T)
         x = self.bij.forward(z)
 
         if self.include_pixels:
@@ -127,13 +131,14 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             n_chi += 1
         red_chi2 /= n_chi
 
-        log_prior = self.prior.log_prob(x) + self.bij.forward_log_det_jacobian(z)
+        log_prior = self.prior.log_prob(
+            x
+        ) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
         return log_like + log_prior, red_chi2
 
     @functools.partial(jit, static_argnums=(0, 1))
     def log_like(self, simulator, z):
         log_like, red_chi2 = jnp.zeros(z.shape[0]), jnp.zeros(z.shape[0])
-        z = list(z.T)
         x = self.bij.forward(z)
 
         if self.include_pixels:
@@ -143,6 +148,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             log_like_pos, _ = self.stats_positions(simulator, x)
             log_like += log_like_pos
         return log_like
+
+    def log_prior(self, z):
+        x = self.bij.forward(z)
+        return self.prior.log_prob(x) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
 
     def init_centroids(self, bs):
         if self.include_positions:
@@ -180,7 +189,7 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
         x = self.bij.forward(z)
         im_sim = simulator.lstsq_simulate(x, self.observed_image, self.err_map)
         log_like = self.observed_dist.log_prob(im_sim)
-        log_prior = self.prior.log_prob(x) + self.bij.forward_log_det_jacobian(z)
+        log_prior = self.prior.log_prob(x) + self.bij.forward_log_det_jacobian(self.pack_bij.forward(z))
         return log_like + log_prior, jnp.mean(
             ((im_sim - self.observed_image) / self.err_map) ** 2, axis=(-2, -1)
         )
