@@ -8,6 +8,8 @@ import gigalens.model
 import gigalens.simulator
 
 
+# TODO: no need for batched grid
+
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
