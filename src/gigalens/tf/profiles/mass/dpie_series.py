@@ -39,12 +39,13 @@ class DPIESeries(MassSeries):
         x, y = self._rotate(x, y, phi)
         f_xx, f_xy, f_yy = [], [], []
         for i in range(order + 1):
-            f_xx_i, f_xy_i, f_yy_i = hessian_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
+            f_xx_i, f_xy_i, _, f_yy_i = hessian_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
             f_xx_i, f_xy_i, f_yy_i = self._hessian_rotate(f_xx_i, f_xy_i, f_yy_i, -phi)
             f_xx.append(f_xx_i)
             f_xy.append(f_xy_i)
             f_yy.append(f_yy_i)
-        f_xx, f_xy, f_yy = tf.stack(f_xx, axis=-1), tf.stack(f_xy, axis=-1), tf.stack(f_yy, axis=-1)  # x, y, batch, (n+1)
+        # stack: x, y, batch, (n+1)
+        f_xx, f_xy, f_yy = tf.stack(f_xx, axis=-1), tf.stack(f_xy, axis=-1), tf.stack(f_yy, axis=-1)
         return f_xx, f_xy, f_yy
 
     @tf.function
