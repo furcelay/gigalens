@@ -14,6 +14,8 @@ import gigalens.model
 import gigalens.simulator
 
 
+# TODO: no need for batched grid
+
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
@@ -42,13 +44,11 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                                                                          self.wcs.n_y * self.supersample)
 
         self.region = jnp.array(jnp.where(region))
-        print(self.region.shape)
         self.img_region = jnp.array(img_region.astype(np.float32))
         img_X, img_Y = self.wcs.pix2angle(self.region[1], self.region[0])
 
         self.img_X = jnp.array(img_X)[..., jnp.newaxis]
         self.img_Y = jnp.array(img_Y)[..., jnp.newaxis]
-        print(self.img_X.shape)
 
         self.numPix = sim_config.num_pix
         self.bs = bs
@@ -63,8 +63,6 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             )[::-1, ::-1, jnp.newaxis, jnp.newaxis]
             self.kernel = jnp.repeat(kernel, self.depth, axis=2)
             self.flat_kernel = jnp.transpose(kernel, (2, 3, 0, 1))
-
-        print((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
 
     @functools.partial(jit, static_argnums=(0,))
     def beta(self, x, y, lens_params: List[Dict]):

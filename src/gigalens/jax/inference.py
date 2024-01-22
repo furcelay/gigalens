@@ -18,6 +18,8 @@ import gigalens.jax.simulator as sim
 import gigalens.model
 
 
+# TODO: init centroids
+
 class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
     def MAP(
             self,
@@ -29,11 +31,19 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
     ):
         dev_cnt = jax.device_count()
         n_samples = (n_samples // dev_cnt) * dev_cnt
+        self.prob_model.init_centroids(bs=n_samples // dev_cnt)
         lens_sim = sim.LensSimulator(
             self.phys_model,
             self.sim_config,
             bs=n_samples // dev_cnt,
         )
+
+        event_size = jnp.zeros(1)
+        if self.prob_model.include_pixels:
+            event_size += jnp.size(lens_sim.img_region)
+        if self.prob_model.include_positions:
+            event_size += self.prob_model.n_position
+
         seed = jax.random.PRNGKey(seed)
 
         start = (
@@ -47,7 +57,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
 
         def loss(z):
             lp, chisq = self.prob_model.log_prob(lens_sim, z)
-            return -jnp.mean(lp) / jnp.size(self.prob_model.observed_image), chisq
+            return -jnp.mean(lp) / event_size, chisq
 
         loss_and_grad = jax.pmap(jax.value_and_grad(loss, has_aux=True))
 
@@ -81,6 +91,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         dev_cnt = jax.device_count()
         seeds = jax.random.split(jax.random.PRNGKey(seed), dev_cnt)
         n_vi = (n_vi // dev_cnt) * dev_cnt
+        self.prob_model.init_centroids(bs=n_vi // dev_cnt)
         lens_sim = sim.LensSimulator(
             self.phys_model,
             self.sim_config,
@@ -151,6 +162,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             self.sim_config,
             bs=n_hmc // dev_cnt,
         )
+        self.prob_model.init_centroids(bs=n_hmc // dev_cnt)
         momentum_distribution = tfd.MultivariateNormalFullCovariance(
             loc=jnp.zeros_like(q_z.mean()),
             covariance_matrix=jnp.linalg.inv(q_z.covariance()),
@@ -194,3 +206,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         end = time.time()
         print(f"Sampling took {(end - start):.1f}s")
         return ret
+
+    def SMC(self):
+        pass

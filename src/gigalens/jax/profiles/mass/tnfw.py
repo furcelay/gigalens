@@ -3,10 +3,10 @@ import functools
 import jax.numpy as jnp
 from jax import jit
 
-import gigalens.profile
+from gigalens.jax.profile import MassProfile
 
 
-class TNFW(gigalens.profile.MassProfile):
+class TNFW(MassProfile):
     _name = "TNFW"
     _params = ["Rs", "alpha_Rs", "r_trunc", "center_x", "center_y"]
 
