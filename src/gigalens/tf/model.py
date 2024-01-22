@@ -109,19 +109,22 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, params):
         chi2 = 0.
         log_like = 0.
-        for cx, cy, cex, cey in zip(self.centroids_x_batch, self.centroids_y_batch,
-                                    self.centroids_errors_x, self.centroids_errors_y):
-            beta_centroids = tf.stack(simulator.beta(cx, cy, params['lens_mass']), axis=0)
-            beta_centroids = tf.transpose(beta_centroids, (2, 0, 1))  # batch size, xy, images
-            beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
-            beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
+        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x_batch,
+                                                                        self.centroids_y_batch,
+                                                                        params)
+        magnifications = simulator.points_magnification(self.centroids_x_batch,
+                                                        self.centroids_y_batch,
+                                                        params)
+        for points, barycentre, cex, cey, mag in zip(beta_points, beta_barycentre,
+                                                     self.centroids_errors_x, self.centroids_errors_y,
+                                                     magnifications):
+            barycentre = tf.repeat(barycentre, points.shape[2], axis=2)
 
-            magnifications = simulator.magnification(cx, cy, params['lens_mass'])
-            magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
+            mag = tf.transpose(mag, (1, 0))  # batch size, images
 
-            err_map = tf.stack([cex / magnifications, cey / magnifications],
+            err_map = tf.stack([cex / mag, cey / mag],
                                axis=1)  # batch size, xy, images
-            chi2_i = tf.reduce_sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
+            chi2_i = tf.reduce_sum(((points - barycentre) / err_map) ** 2, axis=(-2, -1))
             normalization_i = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
             log_like += -1 / 2 * (chi2_i + normalization_i)
             chi2 += chi2_i
