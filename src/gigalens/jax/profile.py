@@ -1,4 +1,7 @@
-import tensorflow as tf
+import functools
+from jax import jit, vjp, vmap
+from jax.tree_util import Partial
+from jax import numpy as jnp
 import gigalens.profile
 from abc import ABC
 
@@ -6,9 +9,9 @@ from abc import ABC
 class MassProfile(gigalens.profile.MassProfile, ABC):
     """Tensorflow interface for a mass profile."""
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def hessian(self, x, y, **kwargs):
-        """Calculates hessian with autograd.
+        """Calculates hessian with autograd in reverse mode.
 
                 Args:
                     x: :math:`x` coordinate at which to evaluate the deflection
@@ -19,23 +22,22 @@ class MassProfile(gigalens.profile.MassProfile, ABC):
                     A tuple :math:`(\\f_xx, \\f_xy, \\f_yx, \\f_yy)` containing the hessian matrix in the :math:`x` and :math:`y` directions
         """
 
-        with tf.GradientTape(watch_accessed_variables=False, persistent=True) as tape:
-            tape.watch(x)
-            tape.watch(y)
-            fx, fy = self.deriv(x, y, **kwargs)
-
-        f_xx, f_xy = tape.gradient(fx, [x, y])
-        f_yx, f_yy = tape.gradient(fy, [x, y])
-
+        partial_deriv = Partial(self.deriv, **kwargs)
+        _, vjp_deriv = vjp(partial_deriv, x, y)
+        std_basis = (
+            jnp.stack([jnp.ones_like(x), jnp.zeros_like(x)]),
+            jnp.stack([jnp.zeros_like(x), jnp.ones_like(x)])
+        )
+        (f_xx, f_yx), (f_xy, f_yy) = vmap(vjp_deriv, in_axes=0, out_axes=0)(std_basis)
         return f_xx, f_xy, f_yx, f_yy
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def convergence(self, x, y, **kwargs):
         f_xx, f_xy, f_yx, f_yy = self.hessian(x, y, **kwargs)
         kappa = (f_xx + f_yy) / 2
         return kappa
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def shear(self, x, y, **kwargs):
         f_xx, f_xy, f_yx, f_yy = self.hessian(x, y, **kwargs)
         gamma1 = (f_xx - f_yy) / 2

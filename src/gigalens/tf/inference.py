@@ -25,7 +25,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
 
         event_size = tf.zeros(1)
         if self.prob_model.include_pixels:
-            event_size += tf.size(lens_sim.img_region, out_type=tf.float32)
+            event_size += tf.math.count_nonzero(lens_sim.img_region, out_type=tf.float32)
         if self.prob_model.include_positions:
             event_size += self.prob_model.n_position
 
@@ -103,7 +103,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         adapt_rate=0.05,
         adapt_mode='dual',
         seed=3,
-        jit_compile=False,
     ):
 
         # def trace_fn(_, pkr):
@@ -163,35 +162,23 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         else:
             raise ValueError(f"Invalid adaptation mode {adapt_mode}, the options are 'simple' and 'dual'")
 
-        if not jit_compile:
-            pbar = tfe.mcmc.ProgressBarReducer(
-                num_results + num_burnin_steps - 1, progress_bar_fn=tqdm_progress_bar_fn
+        pbar = tfe.mcmc.ProgressBarReducer(
+            num_results + num_burnin_steps - 1, progress_bar_fn=tqdm_progress_bar_fn
+        )
+        mc_kernel = tfe.mcmc.WithReductions(mc_kernel, pbar)
+
+        def run_chain():
+
+            return tfp.mcmc.sample_chain(
+                num_results=num_results,
+                num_burnin_steps=num_burnin_steps,
+                current_state=start,
+                kernel=mc_kernel,
+                trace_fn=None,
+                seed=seed,
             )
-            mc_kernel = tfe.mcmc.WithReductions(mc_kernel, pbar)
-
-            @tf.function
-            def run_chain():
-
-                return tfp.mcmc.sample_chain(
-                    num_results=num_results,
-                    num_burnin_steps=num_burnin_steps,
-                    current_state=start,
-                    kernel=mc_kernel,
-                    trace_fn=None,
-                    seed=seed,
-                )
-
-        else:
-            @tf.function(autograph=False, jit_compile=True)
-            def run_chain():
-
-                return tfp.mcmc.sample_chain(
-                    num_results=num_results,
-                    num_burnin_steps=num_burnin_steps,
-                    current_state=start,
-                    kernel=mc_kernel,
-                    trace_fn=None,
-                    seed=seed,
-                )
 
         return run_chain()
+
+    def SMC(self):
+        pass

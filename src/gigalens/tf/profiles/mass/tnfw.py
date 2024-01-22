@@ -11,6 +11,9 @@ class TNFW(MassProfile):
     _name = "TNFW"
     _params = ["Rs", "alpha_Rs", "r_trunc", "center_x", "center_y"]
 
+    def __init__(self):
+        super(TNFW, self).__init__()
+
     @tf.function
     def deriv(self, x, y, Rs, alpha_Rs, r_trunc, center_x, center_y):
         rho0 = alpha_Rs / (4.0 * Rs ** 2 * (1.0 + tf.math.log(0.5)))

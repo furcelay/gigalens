@@ -3,10 +3,10 @@ import functools
 import jax.numpy as jnp
 from jax import jit, lax
 
-import gigalens.profile
+from gigalens.jax.profile import MassProfile
 
 
-class EPL(gigalens.profile.MassProfile):
+class EPL(MassProfile):
     _name = "EPL"
     _params = ["theta_E", "gamma", "e1", "e2", "center_x", "center_y"]
 

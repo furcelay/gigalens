@@ -7,6 +7,9 @@ class SIE(MassProfile):
     s_scale = 1e-4
     _params = ["theta_E", "e1", "e2", "center_x", "center_y"]
 
+    def __init__(self):
+        super(SIE, self).__init__()
+
     @tf.function
     def _param_conv(self, theta_E, e1, e2):
         s_scale = 0

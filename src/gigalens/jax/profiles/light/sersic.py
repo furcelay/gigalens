@@ -9,6 +9,7 @@ import gigalens.profile
 class Sersic(gigalens.profile.LightProfile):
     _name = "SERSIC"
     _params = ["R_sersic", "n_sersic", "center_x", "center_y"]
+    _amp = "Ie"
 
     @functools.partial(jit, static_argnums=(0,))
     def light(self, x, y, R_sersic, n_sersic, center_x, center_y, Ie=None):

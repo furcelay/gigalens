@@ -1,5 +1,9 @@
-import tensorflow as tf
-from gigalens.tf.profile import MassProfile
+import functools
+
+import jax.numpy as jnp
+from jax import jit
+
+from gigalens.jax.profile import MassProfile
 
 """
 Dual Pseudo Isothermal Elliptical Mass Profile (dPIEMS or dPIE)
@@ -30,7 +34,7 @@ class DPIS(MassProfile):
     def __init__(self,):
         super(DPIS, self).__init__()
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def deriv(self, x, y, theta_E, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
@@ -41,37 +45,37 @@ class DPIS(MassProfile):
         f_y = alpha_r * y
         return f_x, f_y
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def _f_A20(self, r2, r_core, r_cut):
         """
         Faster and equiv to equation A20 * r in Eliasdottir (2007), (see Golse PhD)
         """
-        return tf.math.sqrt(r2 + r_core ** 2) - r_core - tf.math.sqrt(r2 + r_cut ** 2) + r_cut
+        return jnp.sqrt(r2 + r_core ** 2) - r_core - jnp.sqrt(r2 + r_cut ** 2) + r_cut
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def _sort_ra_rs(self, r_core, r_cut):
         """
         sorts Ra and Rs to make sure Rs > Ra
         """
-        r_core = tf.where(r_core < r_cut, r_core, r_cut)
-        r_cut = tf.where(r_core > r_cut, r_core, r_cut)
-        r_core = tf.math.maximum(self._r_min, r_core)
-        r_cut = tf.where(r_cut > r_core + self._r_min, r_cut, r_cut + self._r_min)
+        r_core = jnp.where(r_core < r_cut, r_core, r_cut)
+        r_cut = jnp.where(r_core > r_cut, r_core, r_cut)
+        r_core = jnp.maximum(self._r_min, r_core)
+        r_cut = jnp.where(r_cut > r_core + self._r_min, r_cut, r_cut + self._r_min)
         return r_core, r_cut
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def hessian(self, x, y, theta_E, r_core, r_cut, center_x, center_y):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
-        r = tf.math.sqrt(x ** 2 + y ** 2)
-        r = tf.math.maximum(self._r_min, r)
+        r = jnp.sqrt(x ** 2 + y ** 2)
+        r = jnp.maximum(self._r_min, r)
         scale = theta_E * r_cut / (r_cut - r_core)
         gamma = scale / 2 * (
-                2 * (1. / (r_core + tf.math.sqrt(r_core ** 2 + r ** 2))
-                     - 1. / (r_cut + tf.math.sqrt(r_cut ** 2 + r ** 2))) -
-                (1 / tf.math.sqrt(r_core ** 2 + r ** 2) - 1 / tf.math.sqrt(r_cut ** 2 + r ** 2)))
+                2 * (1. / (r_core + jnp.sqrt(r_core ** 2 + r ** 2))
+                     - 1. / (r_cut + jnp.sqrt(r_cut ** 2 + r ** 2))) -
+                (1 / jnp.sqrt(r_core ** 2 + r ** 2) - 1 / jnp.sqrt(r_cut ** 2 + r ** 2)))
         kappa = scale / 2 * (r_core + r_cut) / r_cut * (
-                1 / tf.math.sqrt(r_core ** 2 + r ** 2) - 1 / tf.math.sqrt(r_cut ** 2 + r ** 2))
+                1 / jnp.sqrt(r_core ** 2 + r ** 2) - 1 / jnp.sqrt(r_cut ** 2 + r ** 2))
         sin_imphi = -2 * x * y / r ** 2
         cos_imphi = (y ** 2 - x ** 2) / r ** 2
         gamma1 = cos_imphi * gamma
@@ -82,15 +86,15 @@ class DPIS(MassProfile):
         f_xy = gamma2
         return f_xx, f_xy, f_xy, f_yy
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def convergence(self, x, y, theta_E, r_core, r_cut, center_x=0, center_y=0):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         x, y = x - center_x, y - center_y
-        r = tf.math.sqrt(x ** 2 + y ** 2)
-        r = tf.math.maximum(self._r_min, r)
+        r = jnp.sqrt(x ** 2 + y ** 2)
+        r = jnp.maximum(self._r_min, r)
         scale = theta_E * r_cut / (r_cut - r_core)
         kappa = scale / 2 * (r_core + r_cut) / r_cut * (
-                1 / tf.math.sqrt(r_core ** 2 + r ** 2) - 1 / tf.math.sqrt(r_cut ** 2 + r ** 2))
+                1 / jnp.sqrt(r_core ** 2 + r ** 2) - 1 / jnp.sqrt(r_cut ** 2 + r ** 2))
         return kappa
 
 
@@ -102,7 +106,7 @@ class DPIE(MassProfile):
     def __init__(self):
         super(DPIE, self).__init__()
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def deriv(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x=0, center_y=0):
         """
         Same as Lenstool implementation of Kassiola & Kovner, 1993 PIEMD, paragraph 4.1
@@ -118,7 +122,7 @@ class DPIE(MassProfile):
         alpha_x, alpha_y = self._rotate(alpha_x, alpha_y, -phi)
         return scale * alpha_x, scale * alpha_y
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def hessian(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x=0, center_y=0):
         """
         Same as Lenstool implementation of Kassiola & Kovner, 1993 PIEMD, paragraph 4.1
@@ -137,7 +141,7 @@ class DPIE(MassProfile):
         f_xx, f_xy, f_yx, f_yy = self._hessian_rotate(f_xx, f_xy, f_yx, f_yy, -phi)
         return f_xx, f_xy, f_yx, f_yy
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def convergence(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x=0, center_y=0):
         e, q, phi = self._param_conv(e1, e2)
         x, y = x - center_x, y - center_y
@@ -145,16 +149,16 @@ class DPIE(MassProfile):
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         scale = theta_E * r_cut / (r_cut - r_core)
         rem2 = x ** 2 / (1. + e) ** 2 + y ** 2 / (1. - e) ** 2
-        kappa = scale / 2 * (1 / tf.math.sqrt(rem2 + r_core ** 2) - 1 / tf.math.sqrt(rem2 + r_cut ** 2))
+        kappa = scale / 2 * (1 / jnp.sqrt(rem2 + r_core ** 2) - 1 / jnp.sqrt(rem2 + r_cut ** 2))
         return kappa
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def _rotate(self, x, y, phi):
-        cos_phi = tf.cos(phi, name=self.name + "rotate-cos")
-        sin_phi = tf.sin(phi, name=self.name + "rotate-sin")
+        cos_phi = jnp.cos(phi)
+        sin_phi = jnp.sin(phi)
         return x * cos_phi + y * sin_phi, -x * sin_phi + y * cos_phi
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def _hessian_rotate(self, f_xx, f_xy, f_yx, f_yy, phi):
         """
          rotation matrix
@@ -168,8 +172,8 @@ class DPIE(MassProfile):
         returns R H R^T
 
         """
-        cos_2phi = tf.cos(2 * phi, name=self.name + "rotate-cos")
-        sin_2phi = tf.sin(2 * phi, name=self.name + "rotate-sin")
+        cos_2phi = jnp.cos(2 * phi)
+        sin_2phi = jnp.sin(2 * phi)
         a = 1 / 2 * (f_xx + f_yy)
         b = 1 / 2 * (f_xx - f_yy) * cos_2phi
         c = f_xy * sin_2phi
@@ -180,27 +184,27 @@ class DPIE(MassProfile):
         f_yy_rot = a - b - c
         return f_xx_rot, f_xy_rot, f_yx_rot, f_yy_rot
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def _param_conv(self, e1, e2):
-        phi = tf.atan2(e2, e1) / 2
-        e = tf.math.minimum(tf.math.sqrt(e1 ** 2 + e2 ** 2), 0.9999)
+        phi = jnp.atan2(e2, e1) / 2
+        e = jnp.minimum(jnp.sqrt(e1 ** 2 + e2 ** 2), 0.9999)
         q = (1 - e) / (1 + e)
         return e, q, phi
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def _sort_ra_rs(self, r_core, r_cut):
         """
         sorts Ra and Rs to make sure Rs > Ra
         """
-        r_core = tf.where(r_core < r_cut, r_core, r_cut)
-        r_cut = tf.where(r_core > r_cut, r_core, r_cut)
-        r_core = tf.math.maximum(self._r_min, r_core)
-        r_cut = tf.where(r_cut > r_core + self._r_min, r_cut, r_cut + self._r_min)
+        r_core = jnp.where(r_core < r_cut, r_core, r_cut)
+        r_cut = jnp.where(r_core > r_cut, r_core, r_cut)
+        r_core = jnp.maximum(self._r_min, r_core)
+        r_cut = jnp.where(r_cut > r_core + self._r_min, r_cut, r_cut + self._r_min)
         return r_core, r_cut
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def complex_deriv_dual(self, x, y, r_core, r_cut, e, q):
-        sqe = tf.math.sqrt(e)
+        sqe = jnp.sqrt(e)
         rem2 = x ** 2 / (1. + e) ** 2 + y ** 2 / (1. - e) ** 2
 
         zci_re = 0
@@ -208,13 +212,13 @@ class DPIE(MassProfile):
 
         # r_core: zsi_rc = (a + bi)/(c + di)
         znum_rc_re = q * x  # a
-        znum_rc_im = 2. * sqe * tf.math.sqrt(r_core ** 2 + rem2) - y / q  # b
+        znum_rc_im = 2. * sqe * jnp.sqrt(r_core ** 2 + rem2) - y / q  # b
         zden_rc_re = x  # c
         zden_rc_im = 2. * r_core * sqe - y  # d
 
         # r_cut: zsi_rcut = (a + ei)/(c + fi)
         # znum_rcut_re = znum_rc_re  # a
-        znum_rcut_im = 2. * sqe * tf.math.sqrt(r_cut ** 2 + rem2) - y / q  # e
+        znum_rcut_im = 2. * sqe * jnp.sqrt(r_cut ** 2 + rem2) - y / q  # e
         # zden_rcut_re = zden_rc_re  # c
         zden_rcut_im = 2. * r_cut * sqe - y  # f
 
@@ -246,22 +250,22 @@ class DPIE(MassProfile):
 
         # compute the zr = log(zis_rc / zis_rcut) = log(aaa + bbb * I)
         norm2 = aaa ** 2 + bbb ** 2
-        zr_re = tf.math.log(tf.math.sqrt(norm2))
-        zr_im = tf.math.atan2(bbb, aaa)
+        zr_re = jnp.log(jnp.sqrt(norm2))
+        zr_im = jnp.atan2(bbb, aaa)
 
         # now compute final result: zres = zci * log(zr)
         zres_re = zci_re * zr_re - zci_im * zr_im
         zres_im = zci_im * zr_re + zci_re * zr_im
         return zres_re, zres_im
 
-    @tf.function
+    @functools.partial(jit, static_argnums=(0,))
     def complex_hessian_single(self, x, y, r_w, e, q):
-        sqe = tf.math.sqrt(e)
+        sqe = jnp.sqrt(e)
         qinv = 1. / q
         cxro = (1. + e) * (1. + e)  # rem ^ 2 = x ^ 2 / (1 + e ^ 2) + y ^ 2 / (1 - e ^ 2) Eq 2.3.6
         cyro = (1. - e) * (1. - e)
         ci = 0.5 * (1. - e ** 2) / sqe
-        wrem = tf.math.sqrt(
+        wrem = jnp.sqrt(
             r_w ** 2 + x ** 2 / cxro + y ** 2 / cyro)  # wrem ^ 2 = r_w ^ 2 + rem ^ 2 with r_w core radius
         """
         zden = cpx(x, (2. * r_w * sqe - y)) # denominator

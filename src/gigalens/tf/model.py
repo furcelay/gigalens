@@ -41,14 +41,12 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         centroids_errors_x=None,
         centroids_errors_y=None,
         include_pixels=True,
-        include_positions=True,
-        use_magnification=False,
+        include_positions=True
     ):
         super(ForwardProbModel, self).__init__(prior)
 
         self.include_pixels = include_pixels
         self.include_positions = include_positions
-        self.use_magnification = use_magnification
 
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)
@@ -108,20 +106,17 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         return log_like, red_chi2
 
     @tf.function
-    def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, lens_params: List[Dict]):
+    def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, params):
         chi2 = 0.
         log_like = 0.
         for cx, cy, cex, cey in zip(self.centroids_x_batch, self.centroids_y_batch,
                                     self.centroids_errors_x, self.centroids_errors_y):
-            beta_centroids = tf.stack(simulator.beta(cx, cy, lens_params), axis=0)
+            beta_centroids = tf.stack(simulator.beta(cx, cy, params['lens_mass']), axis=0)
             beta_centroids = tf.transpose(beta_centroids, (2, 0, 1))  # batch size, xy, images
             beta_barycentre = tf.math.reduce_mean(beta_centroids, axis=2, keepdims=True)
             beta_barycentre = tf.repeat(beta_barycentre, beta_centroids.shape[2], axis=2)
 
-            if self.use_magnification:
-                magnifications = simulator.magnification(cx, cy, lens_params)
-            else:
-                magnifications = tf.ones_like(cx, dtype=tf.float32)
+            magnifications = simulator.magnification(cx, cy, params['lens_mass'])
             magnifications = tf.transpose(magnifications, (1, 0))  # batch size, images
 
             err_map = tf.stack([cex / magnifications, cey / magnifications],
@@ -165,7 +160,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             red_chi2 += red_chi2_pix
             n_chi += 1
         if self.include_positions:
-            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params['lens_mass'])
+            log_like_pos, red_chi2_pos = self.stats_positions(simulator, params)
             log_like += log_like_pos
             red_chi2 += red_chi2_pos
             n_chi += 1
@@ -185,7 +180,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             log_like_pix, _ = self.stats_pixels(simulator, params)
             log_like += log_like_pix
         if self.include_positions:
-            log_like_pos, _ = self.stats_positions(simulator, params['lens_mass'])
+            log_like_pos, _ = self.stats_positions(simulator, params)
             log_like += log_like_pos
         return log_like
 
@@ -283,7 +278,7 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
         )
 
 
-class TFPhysicalModel(gigalens.model.PhysicalModel):
+class PhysicalModel(gigalens.model.PhysicalModel):
     """A physical model for the lensing system.
 
     Args:
@@ -303,11 +298,11 @@ class TFPhysicalModel(gigalens.model.PhysicalModel):
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
         lenses_constants: List[Dict] = None,
-        lens_light_constants:List[Dict] = None,
+        lens_light_constants: List[Dict] = None,
         source_light_constants: List[Dict] = None,
     ):
-        super(TFPhysicalModel, self).__init__(lenses, lens_light, source_light,
-                                              lenses_constants, lens_light_constants, source_light_constants)
+        super(PhysicalModel, self).__init__(lenses, lens_light, source_light,
+                                            lenses_constants, lens_light_constants, source_light_constants)
         self.lenses_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}
                                  for d in self.lenses_constants]
         self.lens_light_constants = [{k: tf.constant(v, dtype=tf.float32) for k, v in d.items()}

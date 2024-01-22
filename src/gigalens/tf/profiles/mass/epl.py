@@ -1,12 +1,8 @@
 import tensorflow as tf
-import tensorflow_probability as tfp
-
-import gigalens.profile
-
-tfd = tfp.distributions
+from gigalens.tf.profile import MassProfile
 
 
-class EPL(gigalens.profile.MassProfile):
+class EPL(MassProfile):
     """The elliptical power law mass profile, calculated iteratively as in :cite:p:`tessore2015a`.
 
     Attributes:
@@ -17,7 +13,7 @@ class EPL(gigalens.profile.MassProfile):
     _params = ["theta_E", "gamma", "e1", "e2", "center_x", "center_y"]
 
     def __init__(self, niter=50):
-        super().__init__()
+        super(EPL, self).__init__()
         self.niter = niter
 
     @tf.function

@@ -3,10 +3,10 @@ import functools
 import jax.numpy as jnp
 from jax import jit
 
-import gigalens.profile
+from gigalens.jax.profile import MassProfile
 
 
-class SIE(gigalens.profile.MassProfile):
+class SIE(MassProfile):
     _name = "SIE"
     s_scale = 1e-4
     _params = ["theta_E", "e1", "e2", "center_x", "center_y"]

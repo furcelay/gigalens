@@ -8,6 +8,8 @@ import gigalens.model
 import gigalens.simulator
 
 
+# TODO: no need for batched grid
+
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
@@ -105,6 +107,22 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         f_yy *= plane_conv
         det_A = (1 - f_xx) * (1 - f_yy) - f_xy * f_yx
         return 1. / det_A  # attention, if dividing by zero
+
+    @tf.function
+    def convergence(self, x, y, lens_params: List[Dict]):
+        kappa = tf.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            kappa += lens.convergence(x, y, **p, **c)
+        return kappa
+
+    @tf.function
+    def shear(self, x, y, lens_params: List[Dict]):
+        gamma1, gamma2 = tf.zeros_like(x), tf.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            g1, g2 = lens.shear(x, y, **p, **c)
+            gamma1 += g1
+            gamma2 += g2
+        return gamma1, gamma2
 
     @tf.function
     def simulate(self, params, no_deflection=False):
