@@ -25,7 +25,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
 
         event_size = tf.zeros(1)
         if self.prob_model.include_pixels:
-            event_size += tf.size(lens_sim.img_region, out_type=tf.float32)
+            event_size += tf.math.count_nonzero(lens_sim.img_region, out_type=tf.float32)
         if self.prob_model.include_positions:
             event_size += self.prob_model.n_position
 

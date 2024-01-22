@@ -18,49 +18,6 @@ PROFILES = {
 }
 
 
-def sympy_deflection(x, y, e, r_core, r_cut):
-    scale = r_cut / (r_cut - r_core)
-    q = (1 - e) / (1 + e)
-    sqe = sp.sqrt(e)
-    rem2 = x ** 2 / (1. + e) ** 2 + y ** 2 / (1. - e) ** 2
-
-    zci_re = 0
-    zci_im = -0.5 * (1. - e ** 2) / sqe
-
-    # r_core: zsi_rc = (a + bi)/(c + di)
-    znum_rc_re = q * x  # a
-    znum_rc_im = 2. * sqe * sp.sqrt(r_core ** 2 + rem2) - y / q  # b
-    zden_rc_re = x  # c
-    zden_rc_im = 2. * r_core * sqe - y  # d
-
-    # r_cut: zsi_rcut = (a + ei)/(c + fi)
-    # znum_rcut_re = znum_rc_re  # a
-    znum_rcut_im = 2. * sqe * sp.sqrt(r_cut ** 2 + rem2) - y / q  # e
-    # zden_rcut_re = zden_rc_re  # c
-    zden_rcut_im = 2. * r_cut * sqe - y  # f
-
-    aa = (znum_rc_re * zden_rc_re - znum_rc_im * zden_rcut_im)
-    bb = (znum_rc_re * zden_rcut_im + znum_rc_im * zden_rc_re)
-    cc = (znum_rc_re * zden_rc_re - zden_rc_im * znum_rcut_im)
-    dd = (znum_rc_re * zden_rc_im + zden_rc_re * znum_rcut_im)
-
-    # zis_rc / zis_rcut = ((aa * cc + bb * dd) / norm) + ((bb * cc - aa * dd) / norm) * I
-    # zis_rc / zis_rcut = aaa + bbb * I
-    norm = (cc ** 2 + dd ** 2)
-    aaa = (aa * cc + bb * dd) / norm
-    bbb = (bb * cc - aa * dd) / norm
-
-    # compute the zr = log(zis_rc / zis_rcut) = log(aaa + bbb * I)
-    norm2 = aaa ** 2 + bbb ** 2
-    zr_re = sp.log(sp.sqrt(norm2))
-    zr_im = sp.atan2(bbb, aaa)
-
-    # now compute final result: zres = zci * log(zr)
-    zres_re = zci_re * zr_re - zci_im * zr_im
-    zres_im = zci_im * zr_re + zci_re * zr_im
-    return scale * sp.Matrix([zres_re, zres_im])
-
-
 def sympy_series(expr, var, order):
     derivs = []
     expr_d = expr
