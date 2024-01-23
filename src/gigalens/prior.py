@@ -1,4 +1,7 @@
-class ProfilePrior:
+from typing import Optional, List
+
+
+class ProfilePriorBase:
     _tfd = None
 
     def __init__(self, profile, params):
@@ -30,7 +33,7 @@ class ProfilePrior:
         return f"{self.profile}(vars:{list(self.variables.keys())},const:{list(self.constants.keys())})"
 
 
-class CompoundPrior:
+class CompoundPriorBase:
     """
         lenses:    {1: prof1,         2: prof2,    ...}
         prior:     {1: {p1, p2 , p3}, 2: {p1, p2}, ...}
@@ -39,7 +42,7 @@ class CompoundPrior:
 
     _tfd = None
 
-    def __init__(self, models: ProfilePrior):
+    def __init__(self, models: Optional[List[ProfilePriorBase]] = None):
         if models is None:
             models = []
         self.models = models
@@ -59,12 +62,12 @@ class CompoundPrior:
         return f"CompoundModel({self.models})"
 
 
-class LensPrior:
+class LensPriorBase:
     _phys_model_cls = None
     _tfd = None
     _tfb = None
 
-    def __init__(self, lenses: CompoundPrior, sources: CompoundPrior, foreground: CompoundPrior):
+    def __init__(self, lenses: CompoundPriorBase, sources: CompoundPriorBase, foreground: CompoundPriorBase):
         self.lenses = lenses
         self.sources = sources
         self.foreground = foreground
