@@ -86,6 +86,22 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return 1. / det_A  # attention, if dividing by zero
 
     @functools.partial(jit, static_argnums=(0,))
+    def convergence(self, x, y, lens_params: List[Dict]):
+        kappa = jnp.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            kappa += lens.convergence(x, y, **p, **c)
+        return kappa
+
+    @functools.partial(jit, static_argnums=(0,))
+    def shear(self, x, y, lens_params: List[Dict]):
+        gamma1, gamma2 = jnp.zeros_like(x), jnp.zeros_like(x)
+        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+            g1, g2 = lens.shear(x, y, **p, **c)
+            gamma1 += g1
+            gamma2 += g2
+        return gamma1, gamma2
+
+    @functools.partial(jit, static_argnums=(0,))
     def simulate(self, params, no_deflection=False):
         if 'lens_mass' in params:
             lens_params = params['lens_mass']
