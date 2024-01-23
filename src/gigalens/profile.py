@@ -37,7 +37,6 @@ class LightProfile(Parameterized, ABC):
         super(LightProfile, self).__init__(*args, **kwargs)
         self._use_lstsq = use_lstsq
         self.depth = 1
-        self.params.append("deflection_ratio")
         if not self.use_lstsq:
             self.params.append(self._amp)
 
