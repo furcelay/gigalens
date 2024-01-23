@@ -42,9 +42,7 @@ class CompoundPriorBase:
 
     _tfd = None
 
-    def __init__(self, models: Optional[List[ProfilePriorBase]] = None):
-        if models is None:
-            models = []
+    def __init__(self, *models: Optional[ProfilePriorBase]):
         self.models = models
         self.keys = [str(i) for i in range(len(models))]
         self.profiles = {str(i): m.profile for i, m in enumerate(models)}

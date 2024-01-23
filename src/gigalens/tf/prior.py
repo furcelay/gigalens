@@ -16,8 +16,8 @@ class CompoundPrior(prior.CompoundPriorBase):
 
     _tfd = tfd
 
-    def __init__(self, models: Optional[ProfilePrior] = None):
-        super(CompoundPrior, self).__init__(models)
+    def __init__(self, *models: Optional[ProfilePrior]):
+        super(CompoundPrior, self).__init__(*models)
 
 
 class LensPrior(prior.LensPriorBase):
