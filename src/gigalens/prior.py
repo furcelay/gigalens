@@ -42,7 +42,7 @@ class CompoundPriorBase:
 
     _tfd = None
 
-    def __init__(self, *models: Optional[ProfilePriorBase]):
+    def __init__(self, models: List[ProfilePriorBase]):
         self.models = models
         self.keys = [str(i) for i in range(len(models))]
         self.profiles = {str(i): m.profile for i, m in enumerate(models)}
@@ -65,19 +65,34 @@ class LensPriorBase:
     _tfd = None
     _tfb = None
 
-    def __init__(self, lenses: CompoundPriorBase, sources: CompoundPriorBase, foreground: CompoundPriorBase):
-        self.lenses = lenses
-        self.sources = sources
-        self.foreground = foreground
-        self.num_free_params = lenses.num_free_params + sources.num_free_params + foreground.num_free_params
+    def __init__(self,
+                 lenses: Optional[List[ProfilePriorBase]] = None,
+                 sources: Optional[List[ProfilePriorBase]] = None,
+                 foreground: Optional[List[ProfilePriorBase]] = None):
+
+        if foreground is None:
+            foreground = []
+        if sources is None:
+            sources = []
+        if lenses is None:
+            lenses = []
+
+        self.lenses = CompoundPriorBase(lenses)
+        self.sources = CompoundPriorBase(sources)
+        self.foreground = CompoundPriorBase(foreground)
+
+        self.num_free_params = 0
+        self.num_free_params += self.sources.num_free_params
+        self.num_free_params += self.lenses.num_free_params
+        self.num_free_params += self.foreground.num_free_params
 
         priors = {}
-        if lenses.prior is not None:
-            priors['lenses'] = lenses.prior
-        if sources.prior is not None:
-            priors['sources'] = sources.prior
-        if foreground.prior is not None:
-            priors['foreground'] = foreground.prior
+        if self.lenses.prior is not None:
+            priors['lenses'] = self.lenses.prior
+        if self.sources.prior is not None:
+            priors['sources'] = self.sources.prior
+        if self.foreground.prior is not None:
+            priors['foreground'] = self.foreground.prior
 
         self.prior = None
         if priors:

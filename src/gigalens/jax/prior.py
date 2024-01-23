@@ -1,7 +1,7 @@
 from gigalens import prior
 from gigalens.jax.model import PhysicalModel
 from tensorflow_probability.substrates.jax import distributions as tfd, bijectors as tfb
-from typing import Optional
+from typing import List, Optional
 
 
 class ProfilePrior(prior.ProfilePriorBase):
@@ -16,8 +16,8 @@ class CompoundPrior(prior.CompoundPriorBase):
 
     _tfd = tfd
 
-    def __init__(self, *models: Optional[ProfilePrior]):
-        super(CompoundPrior, self).__init__(*models)
+    def __init__(self, models: Optional[List[ProfilePrior]]):
+        super(CompoundPrior, self).__init__(models)
 
 
 class LensPrior(prior.LensPriorBase):
@@ -26,5 +26,16 @@ class LensPrior(prior.LensPriorBase):
     _tfd = tfd
     _tfb = tfb
 
-    def __init__(self, lenses=CompoundPrior(), sources=CompoundPrior(), foreground=CompoundPrior()):
+    def __init__(self,
+                 lenses: Optional[List[ProfilePrior]] = None,
+                 sources: Optional[List[ProfilePrior]] = None,
+                 foreground: Optional[List[ProfilePrior]] = None):
+
+        if foreground is None:
+            foreground = []
+        if sources is None:
+            sources = []
+        if lenses is None:
+            lenses = []
+
         super(LensPrior, self).__init__(lenses, sources, foreground)
