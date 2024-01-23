@@ -84,6 +84,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         beta_x, beta_y = x - deflection_ratio * f_x, y - deflection_ratio * f_y
         return beta_x, beta_y
 
+    @tf.function
     def points_beta_barycentre(self,
                                x,
                                y,
@@ -94,8 +95,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             source_distance = [{} for _ in self.phys_model.source_light]
         beta_points = []
         beta_barycentre = []
-        for x_i, y_i, dp, dc in zip(x, y,
-                                                source_distance, self.phys_model.distance_constants):
+        for x_i, y_i, dp, dc in zip(x, y, source_distance, self.phys_model.distance_constants):
             deflect_rat = (dp | dc).get('deflection_ratio', tf.constant(1.))
             beta_points_i = tf.stack(self.beta(x_i, y_i, params['lens_mass'], deflect_rat), axis=0)
             beta_points_i = tf.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
@@ -104,6 +104,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             beta_barycentre.append(beta_barycentre_i)
         return beta_points, beta_barycentre
 
+    @tf.function
     def hessian(self, x, y, lens_params: List[Dict]):
         f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
         for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
@@ -124,6 +125,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         det_A = (1 - f_xx) * (1 - f_yy) - f_xy * f_yx
         return 1. / det_A  # attention, if dividing by zero
 
+    @tf.function
     def points_magnification(self,
                              x,
                              y,
@@ -133,8 +135,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         else:
             source_distance = [{} for _ in self.phys_model.source_light]
         magnifications = []
-        for x_i, y_i, dp, dc in zip(x, y,
-                                                source_distance, self.phys_model.distance_constants):
+        for x_i, y_i, dp, dc in zip(x, y, source_distance, self.phys_model.distance_constants):
             deflect_rat = (dp | dc).get('deflection_ratio', tf.constant(1.))
             magnifications.append(self.magnification(x_i, y_i, params['lens_mass'], deflect_rat))
         return magnifications
