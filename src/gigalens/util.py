@@ -9,7 +9,7 @@ def merge_dicts(d1, d2):
             if isinstance(d1[key], dict) and isinstance(d2[key], dict):  # Both values are dictionaries
                 merged[key] = merge_dicts(d1[key], d2[key])  # Recursively merge them
             else:
-                raise ValueError(f"Conflict: {key} parameter is in both dictionaries, cannot safely merge them")
+                raise ValueError(f"Conflict: {key} parameter is in both dictionaries, cannot safely merge them\nleft:{d1[key]}right:{d2[key]}")
         elif key in d1:  # Key is only in d1
             merged[key] = d1[key]
         else:  # Key is only in d2
