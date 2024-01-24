@@ -80,7 +80,7 @@ class LensSimulatorInterface(ABC):
 
     def __init__(
         self,
-        phys_model: gigalens.model.PhysicalModel,
+        phys_model: gigalens.model.PhysicalModelBase,
         sim_config: SimulatorConfig,
         bs: int,
     ):
