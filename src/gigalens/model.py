@@ -4,7 +4,7 @@ from typing import List, Dict
 import gigalens.profile
 
 
-class PhysicalModel:
+class PhysicalModelBase:
     """A physical model for the lensing system.
 
     Args:
@@ -27,7 +27,7 @@ class PhysicalModel:
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
         lenses_constants: List[Dict] = None,
-        lens_light_constants:List[Dict] = None,
+        lens_light_constants: List[Dict] = None,
         source_light_constants: List[Dict] = None,
     ):
         self.lenses = lenses
