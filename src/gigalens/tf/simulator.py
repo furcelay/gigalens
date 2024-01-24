@@ -13,7 +13,7 @@ import gigalens.simulator
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
-            phys_model: gigalens.model.PhysicalModel,
+            phys_model:  gigalens.model.PhysicalModelBase,
             sim_config: gigalens.simulator.SimulatorConfig,
             bs: int,
     ):
@@ -89,14 +89,11 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                                x,
                                y,
                                params):
-        if 'source_distance' in params:
-            source_distance = params['source_distance']
-        else:
-            source_distance = [{} for _ in self.phys_model.source_light]
+        source_params = params['source_light']
         beta_points = []
         beta_barycentre = []
-        for x_i, y_i, dp, dc in zip(x, y, source_distance, self.phys_model.distance_constants):
-            deflect_rat = (dp | dc).get('deflection_ratio', tf.constant(1.))
+        for x_i, y_i, sp in zip(x, y, source_params, self.phys_model.distance_constants):
+            deflect_rat = sp['deflection_ratio']
             beta_points_i = tf.stack(self.beta(x_i, y_i, params['lens_mass'], deflect_rat), axis=0)
             beta_points_i = tf.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
             beta_barycentre_i = tf.math.reduce_mean(beta_points_i, axis=2, keepdims=True)
@@ -130,13 +127,10 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                              x,
                              y,
                              params):
-        if 'source_distance' in params:
-            source_distance = params['source_distance']
-        else:
-            source_distance = [{} for _ in self.phys_model.source_light]
+        source_params = params['source_light']
         magnifications = []
-        for x_i, y_i, dp, dc in zip(x, y, source_distance, self.phys_model.distance_constants):
-            deflect_rat = (dp | dc).get('deflection_ratio', tf.constant(1.))
+        for x_i, y_i, sp in zip(x, y, source_params, self.phys_model.distance_constants):
+            deflect_rat = sp['deflection_ratio']
             magnifications.append(self.magnification(x_i, y_i, params['lens_mass'], deflect_rat))
         return magnifications
 
@@ -188,13 +182,12 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
 
         # deflected source light, considering redshift
-        for lightModel, lp, lc, dp, dc in zip(self.phys_model.source_light,
-                                              source_light_params, self.phys_model.source_light_constants,
-                                              source_distance, self.phys_model.distance_constants):
-            deflect_rat = (dp | dc).get('deflection_ratio', tf.constant(1.))
+        for lightModel, lp, lc in zip(self.phys_model.source_light,
+                                      source_light_params, self.phys_model.source_light_constants):
+
+            deflect_rat = lp.pop('deflection_ratio')  # TODO: check if this is safe
             if no_deflection:
                 beta_x, beta_y = self.img_X, self.img_Y
-
             else:
                 beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
 
