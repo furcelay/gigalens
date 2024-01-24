@@ -1,5 +1,4 @@
 from typing import Optional, List
-from gigalens.util import merge_dicts
 
 
 class ProfilePriorBase:
@@ -128,9 +127,6 @@ class LensPriorBase:
 
     def sample(self, shape=(1,), seed=None):
         return self.prior.sample(shape, seed)
-
-    def add_constants(self, params):
-        return _merge_dicts(params, self.constants)
 
     def __repr__(self):
         return f"lenses: {self.lenses} | sources: {self.sources} | foreground: {self.foreground}"

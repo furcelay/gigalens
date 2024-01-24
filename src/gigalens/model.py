@@ -43,6 +43,14 @@ class PhysicalModel:
         self.lens_light_constants = lens_light_constants
         self.source_light_constants = source_light_constants
 
+    @property
+    def constants(self):
+        return {  # TODO: review if change names
+            'lens_mass': self.lenses_constants,
+            'source_light': self.source_light_constants,
+            'lens_light': self.lens_light_constants
+        }
+
 
 class ProbabilisticModel(ABC):
     """A probabilistic model for the lensing system.

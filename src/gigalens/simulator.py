@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Dict, Any, Tuple, Optional
+from gigalens.util import merge_dicts
 
 import numpy as np
 from lenstronomy.Data.pixel_grid import PixelGrid
@@ -161,3 +162,6 @@ class LensSimulatorInterface(ABC):
             pixel_grid_rot._y_grid.astype(np.float32),
         )
         return ra_at_xy_0, dec_at_xy_0, img_x, img_y
+
+    def include_constants(self, params):
+        return merge_dicts(params, self.phys_model.constants)
