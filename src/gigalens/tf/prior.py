@@ -1,5 +1,5 @@
 from gigalens import prior
-from gigalens.tf.model import PhysicalModel
+from gigalens.tf.phisical_model import PhysicalModel
 from tensorflow_probability import distributions as tfd, bijectors as tfb
 from typing import Optional, List
 

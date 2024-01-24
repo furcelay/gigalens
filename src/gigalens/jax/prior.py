@@ -1,5 +1,5 @@
 from gigalens import prior
-from gigalens.jax.model import PhysicalModel
+from gigalens.jax.phisical_model import PhysicalModel
 from tensorflow_probability.substrates.jax import distributions as tfd, bijectors as tfb
 from typing import List, Optional
 
