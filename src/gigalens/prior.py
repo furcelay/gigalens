@@ -42,9 +42,7 @@ class CompoundPriorBase:
 
     _tfd = None
 
-    def __init__(self, models: Optional[List[ProfilePriorBase]] = None):
-        if models is None:
-            models = []
+    def __init__(self, models: List[ProfilePriorBase]):
         self.models = models
         self.keys = [str(i) for i in range(len(models))]
         self.profiles = {str(i): m.profile for i, m in enumerate(models)}
@@ -67,19 +65,41 @@ class LensPriorBase:
     _tfd = None
     _tfb = None
 
-    def __init__(self, lenses: CompoundPriorBase, sources: CompoundPriorBase, foreground: CompoundPriorBase):
-        self.lenses = lenses
-        self.sources = sources
-        self.foreground = foreground
-        self.num_free_params = lenses.num_free_params + sources.num_free_params + foreground.num_free_params
+    def __init__(self,
+                 lenses: Optional[List[ProfilePriorBase]] = None,
+                 sources: Optional[List[ProfilePriorBase]] = None,
+                 foreground: Optional[List[ProfilePriorBase]] = None):
 
+        if foreground is None:
+            foreground = []
+        if sources is None:
+            sources = []
+        if lenses is None:
+            lenses = []
+
+        self.lenses_key = 'lens_mass'  # TODO: change model component keys
+        self.sources_key = 'source_light'
+        self.foreground_key = 'lens_light'
+
+        self.lenses = CompoundPriorBase(lenses)
+        self.sources = CompoundPriorBase(sources)
+        self.foreground = CompoundPriorBase(foreground)
+
+        self.num_free_params = 0
+        self.num_free_params += self.sources.num_free_params
+        self.num_free_params += self.lenses.num_free_params
+        self.num_free_params += self.foreground.num_free_params
+
+        self.constants = {self.lenses_key: self.lenses.constants,
+                          self.sources_key: self.sources.constants,
+                          self.foreground_key: self.foreground.constants}
         priors = {}
-        if lenses.prior is not None:
-            priors['lenses'] = lenses.prior
-        if sources.prior is not None:
-            priors['sources'] = sources.prior
-        if foreground.prior is not None:
-            priors['foreground'] = foreground.prior
+        if self.lenses.prior is not None:
+            priors[self.lenses_key] = self.lenses.prior
+        if self.sources.prior is not None:
+            priors[self.sources_key] = self.sources.prior
+        if self.foreground.prior is not None:
+            priors[self.foreground_key] = self.foreground.prior
 
         self.prior = None
         if priors:

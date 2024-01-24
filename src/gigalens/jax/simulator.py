@@ -148,18 +148,10 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
 
     @functools.partial(jit, static_argnums=(0,))
     def simulate(self, params, no_deflection=False):
-        if 'lens_mass' in params:
-            lens_params = params['lens_mass']
-        else:
-            lens_params = [{} for _ in self.phys_model.lenses]
-        if 'lens_light' in params:
-            lens_light_params = params['lens_light']
-        else:
-            lens_light_params = [{} for _ in self.phys_model.lens_light]
-        if 'source_light' in params:
-            source_light_params = params['source_light']
-        else:
-            source_light_params = [{} for _ in self.phys_model.source_light]
+        params = self.include_constants(params)
+        lens_params = params['lens_mass']
+        lens_light_params = params['lens_light']
+        source_light_params = params['source_light']
 
         img = jnp.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
 
@@ -206,18 +198,10 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             return_coeffs=False,
             no_deflection=False,
     ):
-        if 'lens_mass' in params:
-            lens_params = params['lens_mass']
-        else:
-            lens_params = [{} for _ in self.phys_model.lenses]
-        if 'lens_light' in params:
-            lens_light_params = params['lens_light']
-        else:
-            lens_light_params = [{} for _ in self.phys_model.lens_light]
-        if 'source_light' in params:
-            source_light_params = params['source_light']
-        else:
-            source_light_params = [{} for _ in self.phys_model.source_light]
+        params = self.include_constants(params)
+        lens_params = params['lens_mass']
+        lens_light_params = params['lens_light']
+        source_light_params = params['source_light']
 
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:

@@ -7,6 +7,7 @@ from typing import List, Dict
 import gigalens.model
 import gigalens.tf.simulator
 import gigalens.profile
+from gigalens.tf.prior import LensPrior
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
@@ -18,6 +19,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         observed_image (:obj:`tf.Tensor` or :obj:`numpy.array`): The observed image.
         background_rms (float): The estimated background Gaussian noise level
         exp_time (float): The exposure time (used for calculating Poisson shot noise)
+        prior (:obj:`gigalens.tf.prior.LensPrior`)
         pack_bij (:obj:`tfp.bijectors.Bijector`): A bijector that reshapes from a tensor to a structured parameter
             object (i.e., dictionaries of parameter values). Does not change the input parameters whatsoever, it only
             reshapes them.
@@ -31,7 +33,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     def __init__(
         self,
-        prior: tfd.Distribution,
+        prior: LensPrior,
         observed_image=None,
         background_rms=None,
         exp_time=None,
@@ -78,18 +80,17 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self.centroids_x_batch = None
         self.centroids_y_batch = None
 
-        example = prior.sample(seed=0)
-        size = int(tf.size(tf.nest.flatten(example)))
-        self.pack_bij = tfb.Chain(
-            [
-                tfb.pack_sequence_as(example),
-                tfb.Split(size),
-                tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
-                tfb.Transpose(perm=(1, 0)),
-            ]
-        )
-        self.unconstraining_bij = prior.experimental_default_event_space_bijector()
-        self.bij = tfb.Chain([self.unconstraining_bij, self.pack_bij])
+    @property
+    def pack_bij(self):
+        return self.prior.pack_bij
+
+    @property
+    def unconstraining_bij(self):
+        return self.prior.pack_unconstraining_bij
+
+    @property
+    def bij(self):
+        return self.prior.bij
 
     @tf.function
     def stats_pixels(self, simulator: gigalens.tf.simulator.LensSimulator, params):
