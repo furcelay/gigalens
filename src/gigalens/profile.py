@@ -33,12 +33,15 @@ class LightProfile(Parameterized, ABC):
 
     _amp = ""
 
-    def __init__(self, use_lstsq=False, *args, **kwargs):
+    def __init__(self, use_lstsq=False, is_source=False, *args, **kwargs):
         super(LightProfile, self).__init__(*args, **kwargs)
         self._use_lstsq = use_lstsq
+        self._is_source = is_source
         self.depth = 1
         if not self.use_lstsq:
             self.params.append(self._amp)
+        if is_source:
+            self.params.append("deflection_ratio")
         print(self.params)
 
     @property
@@ -52,9 +55,26 @@ class LightProfile(Parameterized, ABC):
              use_lstsq (bool): Whether to use least squares to solve for linear parameters
         """
         if use_lstsq and not self.use_lstsq:  # Turn least squares on
-            self.params.append("amp")
+            self.params.pop(self.params.index(self._amp))
         elif not use_lstsq and self.use_lstsq:  # Turn least squares off
-            self.params.pop()
+            self.params.append(self._amp)
+        self._use_lstsq = use_lstsq
+
+    @property
+    def is_source(self):
+        return self._is_source
+
+    @is_source.setter
+    def is_source(self, is_source: bool):
+        """
+        Arguments:
+             is_source (bool): Whether the light profile is a lensed source
+        """
+        if is_source and not self.is_source:  # Include the deflection ratio to set the source distance
+            self.params.append("deflection_ratio")
+        elif not is_source and self.is_source:
+            self.params.pop(self.params.index("deflection_ratio"))
+        self._is_source = is_source
 
     @abstractmethod
     def light(self, x, y, **kwargs):
