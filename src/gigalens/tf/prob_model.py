@@ -4,8 +4,7 @@ from tensorflow_probability import distributions as tfd, bijectors as tfb
 
 import gigalens.model
 import gigalens.tf.simulator
-import gigalens.profile
-from gigalens.tf.prior import LensPrior
+import gigalens.tf.prior
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
@@ -31,7 +30,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     def __init__(
         self,
-        prior: LensPrior,
+        prior: gigalens.tf.prior.LensPrior,
         observed_image=None,
         background_rms=None,
         exp_time=None,

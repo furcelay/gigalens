@@ -9,12 +9,13 @@ from tensorflow_probability.substrates.jax import distributions as tfd, bijector
 
 import gigalens.jax.simulator as sim
 import gigalens.model
+import gigalens.jax.prior
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def __init__(
             self,
-            prior: tfd.Distribution,
+            prior: gigalens.jax.prior.LensPrior,
             observed_image=None,
             background_rms=None,
             exp_time=None,
