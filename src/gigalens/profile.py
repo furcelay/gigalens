@@ -15,7 +15,7 @@ class Parameterized(ABC):
 
     def __init__(self, *args, **kwargs):
         self.name = self._name
-        self.params = self._params
+        self.params = self._params.copy()
 
     def __str__(self):
         return self.name
@@ -37,9 +37,9 @@ class LightProfile(Parameterized, ABC):
         super(LightProfile, self).__init__(*args, **kwargs)
         self._use_lstsq = use_lstsq
         self.depth = 1
-        self.params.append("deflection_ratio")
         if not self.use_lstsq:
             self.params.append(self._amp)
+        print(self.params)
 
     @property
     def use_lstsq(self):

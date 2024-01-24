@@ -199,7 +199,7 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
         )
 
 
-class PhysicalModel(gigalens.model.PhysicalModel):
+class PhysicalModel(gigalens.model.PhysicalModelBase):
     """A physical model for the lensing system.
 
     Args:
