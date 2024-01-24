@@ -77,6 +77,10 @@ class LensPriorBase:
         if lenses is None:
             lenses = []
 
+        self.lenses_key = 'lens_mass'  # TODO: change model component keys
+        self.sources_key = 'source_light'
+        self.foreground_key = 'lens_light'
+
         self.lenses = CompoundPriorBase(lenses)
         self.sources = CompoundPriorBase(sources)
         self.foreground = CompoundPriorBase(foreground)
@@ -86,13 +90,16 @@ class LensPriorBase:
         self.num_free_params += self.lenses.num_free_params
         self.num_free_params += self.foreground.num_free_params
 
+        self.constants = {self.lenses_key: self.lenses.constants,
+                          self.sources_key: self.sources.constants,
+                          self.foreground_key: self.foreground.constants}
         priors = {}
         if self.lenses.prior is not None:
-            priors['lenses'] = self.lenses.prior
+            priors[self.lenses_key] = self.lenses.prior
         if self.sources.prior is not None:
-            priors['sources'] = self.sources.prior
+            priors[self.sources_key] = self.sources.prior
         if self.foreground.prior is not None:
-            priors['foreground'] = self.foreground.prior
+            priors[self.foreground_key] = self.foreground.prior
 
         self.prior = None
         if priors:
@@ -121,5 +128,27 @@ class LensPriorBase:
     def sample(self, shape=(1,), seed=None):
         return self.prior.sample(shape, seed)
 
+    def add_constants(self, params):
+        return _merge_dicts(params, self.constants)
+
     def __repr__(self):
         return f"lenses: {self.lenses} | sources: {self.sources} | foreground: {self.foreground}"
+
+
+def _merge_dicts(d1, d2):  # TODO: move this to a utils module
+    """
+    Merge two nested dictionaries into a new one without modifying the originals.
+    Raises ValueError in case of conflicts.
+    """
+    merged = {}
+    for key in d1.keys() | d2.keys():  # Union of keys from both dictionaries
+        if key in d1 and key in d2:  # Key is in both dictionaries
+            if isinstance(d1[key], dict) and isinstance(d2[key], dict):  # Both values are dictionaries
+                merged[key] = _merge_dicts(d1[key], d2[key])  # Recursively merge them
+            else:
+                raise ValueError(f"Conflict: {key} parameter is in both dictionaries, cannot safely merge them")
+        elif key in d1:  # Key is only in d1
+            merged[key] = d1[key]
+        else:  # Key is only in d2
+            merged[key] = d2[key]
+    return merged
