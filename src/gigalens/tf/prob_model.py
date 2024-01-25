@@ -41,21 +41,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         include_pixels=True,
         include_positions=True
     ):
-        super(ForwardProbModel, self).__init__(prior)
-
-        self.include_pixels = include_pixels
-        self.include_positions = include_positions
-
-        self.observed_image = None
-        self.error_map = None
-        self.background_rms = None
-        self.exp_time = None
-        self.centroids_x = None
-        self.centroids_y = None
-        self.centroids_errors_x = None
-        self.centroids_errors_y = None
-        self.centroids_x_batch = None
-        self.centroids_y_batch = None
+        super(ForwardProbModel, self).__init__(prior, include_pixels, include_positions)
 
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)
@@ -70,18 +56,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
             self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
             self.n_position = 2 * tf.size(tf.concat(self.centroids_x, axis=0), out_type=tf.float32)
-
-    @property
-    def pack_bij(self):
-        return self.prior.pack_bij
-
-    @property
-    def unconstraining_bij(self):
-        return self.prior.pack_unconstraining_bij
-
-    @property
-    def bij(self):
-        return self.prior.bij
 
     @tf.function
     def stats_pixels(self, simulator: gigalens.tf.simulator.LensSimulator, params):

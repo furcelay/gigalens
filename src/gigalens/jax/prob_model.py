@@ -26,20 +26,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             include_pixels=True,
             include_positions=True,
     ):
-        super(ForwardProbModel, self).__init__(prior)
-        self.include_pixels = include_pixels
-        self.include_positions = include_positions
-
-        self.observed_image = None
-        self.error_map = None
-        self.background_rms = None
-        self.exp_time = None
-        self.centroids_x = None
-        self.centroids_y = None
-        self.centroids_errors_x = None
-        self.centroids_errors_y = None
-        self.centroids_x_batch = None
-        self.centroids_y_batch = None
+        super(ForwardProbModel, self).__init__(prior, include_pixels, include_positions)
 
         if self.include_pixels:
             self.observed_image = jnp.array(observed_image)

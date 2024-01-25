@@ -55,9 +55,39 @@ class ProbabilisticModel(ABC):
         bij: A bijector that can unconstrain physical parameters (e.g., applying an exponential bijector to strictly positive variables)
     """
 
-    def __init__(self, prior, bij=None, *args):
+    def __init__(self,
+                 prior,
+                 include_pixels=True,
+                 include_positions=True
+                 ):
+
         self.prior = prior
-        self.bij = bij
+
+        self.include_pixels = include_pixels
+        self.include_positions = include_positions
+
+        self.observed_image = None
+        self.error_map = None
+        self.background_rms = None
+        self.exp_time = None
+        self.centroids_x = None
+        self.centroids_y = None
+        self.centroids_errors_x = None
+        self.centroids_errors_y = None
+        self.centroids_x_batch = None
+        self.centroids_y_batch = None
+
+    @property
+    def pack_bij(self):
+        return self.prior.pack_bij
+
+    @property
+    def unconstraining_bij(self):
+        return self.prior.pack_unconstraining_bij
+
+    @property
+    def bij(self):
+        return self.prior.bij
 
     @abstractmethod
     def log_prob(self, simulator, z):

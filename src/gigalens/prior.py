@@ -36,7 +36,7 @@ class ProfilePriorBase(ABC):
 
 class CompoundPriorBase(ABC):
     """
-        lenses:    {1: prof1,         2: prof2,    ...}
+        lenses:    [prof1,            prof2]
         prior:     {1: {p1, p2 , p3}, 2: {p1, p2}, ...}
         constants: {1: {p4},          2: {},       ...}
     """
@@ -46,7 +46,7 @@ class CompoundPriorBase(ABC):
     def __init__(self, models: List[ProfilePriorBase]):
         self.models = models
         self.keys = [str(i) for i in range(len(models))]
-        self.profiles = {str(i): m.profile for i, m in enumerate(models)}
+        self.profiles = [m.profile for m in models]
         self.constants = {str(i): m.constants for i, m in enumerate(models)}
         self.num_free_params = 0
         for m in models:
@@ -106,8 +106,8 @@ class LensPriorBase(ABC):
 
         self.prior = None
         if priors:
-            prior = self._tfd.JointDistributionNamed(priors)
-            example = prior.sample(seed=self.make_seed(0))
+            self.prior = self._tfd.JointDistributionNamed(priors)
+            example = self.prior.sample(seed=self.make_seed(0))
             size = self.num_free_params
             self.pack_bij = self._tfb.Chain([
                 self._tfb.pack_sequence_as(example),
@@ -115,7 +115,7 @@ class LensPriorBase(ABC):
                 self._tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
                 self._tfb.Transpose(perm=(1, 0)),
             ])
-            self.unconstraining_bij = prior.experimental_default_event_space_bijector()
+            self.unconstraining_bij = self.prior.experimental_default_event_space_bijector()
             self.bij = self._tfb.Chain([self.unconstraining_bij, self.pack_bij])
 
     def get_physical_model(self):
@@ -123,9 +123,7 @@ class LensPriorBase(ABC):
             self.lenses.profiles,
             self.sources.profiles,
             self.foreground.profiles,
-            self.lenses.constants,
-            self.sources.constants,
-            self.foreground.constants
+            self.constants
         )
 
     def sample(self, shape=(1,), seed=None):
