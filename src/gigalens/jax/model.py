@@ -104,7 +104,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             magnifications = jnp.transpose(magnifications, (1, 0))  # batch size, images
 
             err_map = jnp.stack([cex / magnifications, cey / magnifications],
-                               axis=1)  # batch size, xy, images
+                                axis=1)  # batch size, xy, images
             chi2_i = jnp.sum(((beta_centroids - beta_barycentre) / err_map) ** 2, axis=(-2, -1))
             normalization_i = jnp.sum(jnp.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
             log_like += -1/2 * (chi2_i + normalization_i)
@@ -222,7 +222,7 @@ class PhysicalModel(gigalens.model.PhysicalModelBase):
                                             lenses_constants, lens_light_constants, source_light_constants)
         self.lenses_constants = [{k: jnp.array(v) for k, v in d.items()}
                                  for d in self.lenses_constants]
-        self.lens_light_constants = [{k: jnp.array(v)  for k, v in d.items()}
+        self.lens_light_constants = [{k: jnp.array(v) for k, v in d.items()}
                                      for d in self.lens_light_constants]
-        self.source_light_constants = [{k: jnp.array(v)  for k, v in d.items()}
+        self.source_light_constants = [{k: jnp.array(v) for k, v in d.items()}
                                        for d in self.source_light_constants]

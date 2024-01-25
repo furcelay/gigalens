@@ -38,8 +38,8 @@ class EPL(MassProfile):
 
         def body(n, p):
             last_x, last_y, f_x, f_y = p
-            prefac = -f * (2 * n - (2 - t)) / (2 * n + (2 - t))
-            last_x, last_y = prefac * (Cs2 * last_x - Ss2 * last_y), prefac * (
+            prefac_ = -f * (2 * n - (2 - t)) / (2 * n + (2 - t))
+            last_x, last_y = prefac_ * (Cs2 * last_x - Ss2 * last_y), prefac_ * (
                     Ss2 * last_x + Cs2 * last_y
             )
             return n + 1, (last_x, last_y, f_x + last_x, f_y + last_y)
