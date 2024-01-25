@@ -4,7 +4,6 @@ import numpy as np
 from jax import jit
 from jax import numpy as jnp
 from jax import random
-from jax.tree_util import tree_flatten
 from tensorflow_probability.substrates.jax import distributions as tfd, bijectors as tfb
 
 import gigalens.jax.simulator as sim
