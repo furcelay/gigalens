@@ -46,35 +46,30 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self.include_pixels = include_pixels
         self.include_positions = include_positions
 
+        self.observed_image = None
+        self.error_map = None
+        self.background_rms = None
+        self.exp_time = None
+        self.centroids_x = None
+        self.centroids_y = None
+        self.centroids_errors_x = None
+        self.centroids_errors_y = None
+        self.centroids_x_batch = None
+        self.centroids_y_batch = None
+
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)
             if error_map is not None:
                 self.error_map = tf.constant(error_map, dtype=tf.float32)
-                self.background_rms = None
-                self.exp_time = None
             else:
                 self.background_rms = tf.constant(background_rms, dtype=tf.float32)
                 self.exp_time = tf.constant(exp_time, dtype=tf.float32)
-                self.error_map = None
-        else:
-            self.observed_image = None
-            self.error_map = None
-            self.background_rms = None
-            self.exp_time = None
-
         if self.include_positions:
             self.centroids_x = [tf.convert_to_tensor(cx, dtype=tf.float32) for cx in centroids_x]
             self.centroids_y = [tf.convert_to_tensor(cy, dtype=tf.float32) for cy in centroids_y]
             self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
             self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
             self.n_position = 2 * tf.size(tf.concat(self.centroids_x, axis=0), out_type=tf.float32)
-        else:
-            self.centroids_x = None
-            self.centroids_y = None
-            self.centroids_errors_x = None
-            self.centroids_errors_y = None
-        self.centroids_x_batch = None
-        self.centroids_y_batch = None
 
     @property
     def pack_bij(self):
