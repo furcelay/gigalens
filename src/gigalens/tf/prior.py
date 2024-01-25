@@ -22,6 +22,7 @@ class CompoundPrior(prior.CompoundPriorBase):
 
 class LensPrior(prior.LensPriorBase):
 
+    _compound_prior_cls = CompoundPrior
     _phys_model_cls = PhysicalModel
     _tfd = tfd
     _tfb = tfb
@@ -39,3 +40,6 @@ class LensPrior(prior.LensPriorBase):
             lenses = []
 
         super(LensPrior, self).__init__(lenses, sources, foreground)
+
+    def make_seed(self, seed):
+        return seed

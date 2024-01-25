@@ -16,9 +16,7 @@ class PhysicalModelBase:
         lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
         lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
         source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
-        lenses_constants: (:obj:`list` of :obj:`dict`): fixed lenses parameters
-        lens_light_constants: (:obj:`list` of :obj:`dict`): fixed lens light parameters
-        source_light_constants: (:obj:`list` of :obj:`dict`): fixed source light parameters
+        constants: (:obj:`dict` of :obj:`dict`): fixed parameters with the same structure as the prior
     """
 
     def __init__(
@@ -26,30 +24,22 @@ class PhysicalModelBase:
         lenses: List[gigalens.profile.MassProfile],
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
-        lenses_constants: List[Dict] = None,
-        lens_light_constants: List[Dict] = None,
-        source_light_constants: List[Dict] = None,
+        constants: Dict = None
     ):
         self.lenses = lenses
         self.lens_light = lens_light
         self.source_light = source_light
-        if lenses_constants is None:
-            lenses_constants = [dict() for _ in range(len(lenses))]
-        if lens_light_constants is None:
-            lens_light_constants = [dict() for _ in range(len(lens_light))]
-        if source_light_constants is None:
-            source_light_constants = [dict() for _ in range(len(source_light))]
-        self.lenses_constants = lenses_constants
-        self.lens_light_constants = lens_light_constants
-        self.source_light_constants = source_light_constants
+        if constants is None:
+            constants = {  # TODO: review if change names
+                'lens_mass': {str(i): {} for i in range(len(self.lenses))},
+                'source_light': {str(i): {} for i in range(len(self.source_light))},
+                'lens_light': {str(i): {} for i in range(len(self.lens_light))}
+            }
+        self._constants = constants
 
     @property
     def constants(self):
-        return {  # TODO: review if change names
-            'lens_mass': self.lenses_constants,
-            'source_light': self.source_light_constants,
-            'lens_light': self.lens_light_constants
-        }
+        return self._constants
 
 
 class ProbabilisticModel(ABC):

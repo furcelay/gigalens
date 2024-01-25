@@ -1,7 +1,8 @@
 from typing import Optional, List
+from abc import ABC, abstractmethod
 
 
-class ProfilePriorBase:
+class ProfilePriorBase(ABC):
     _tfd = None
 
     def __init__(self, profile, params):
@@ -33,7 +34,7 @@ class ProfilePriorBase:
         return f"{self.profile}(vars:{list(self.variables.keys())},const:{list(self.constants.keys())})"
 
 
-class CompoundPriorBase:
+class CompoundPriorBase(ABC):
     """
         lenses:    {1: prof1,         2: prof2,    ...}
         prior:     {1: {p1, p2 , p3}, 2: {p1, p2}, ...}
@@ -57,10 +58,12 @@ class CompoundPriorBase:
             self.prior = self._tfd.JointDistributionNamed(priors)
 
     def __repr__(self):
-        return f"CompoundModel({self.models})"
+        return f"CompoundPrior({self.models})"
 
 
-class LensPriorBase:
+class LensPriorBase(ABC):
+
+    _compound_prior_cls = CompoundPriorBase
     _phys_model_cls = None
     _tfd = None
     _tfb = None
@@ -81,9 +84,9 @@ class LensPriorBase:
         self.sources_key = 'source_light'
         self.foreground_key = 'lens_light'
 
-        self.lenses = CompoundPriorBase(lenses)
-        self.sources = CompoundPriorBase(sources)
-        self.foreground = CompoundPriorBase(foreground)
+        self.lenses = self._compound_prior_cls(lenses)
+        self.sources = self._compound_prior_cls(sources)
+        self.foreground = self._compound_prior_cls(foreground)
 
         self.num_free_params = 0
         self.num_free_params += self.sources.num_free_params
@@ -104,7 +107,7 @@ class LensPriorBase:
         self.prior = None
         if priors:
             prior = self._tfd.JointDistributionNamed(priors)
-            example = prior.sample()
+            example = prior.sample(seed=self.make_seed(0))
             size = self.num_free_params
             self.pack_bij = self._tfb.Chain([
                 self._tfb.pack_sequence_as(example),
@@ -128,5 +131,9 @@ class LensPriorBase:
     def sample(self, shape=(1,), seed=None):
         return self.prior.sample(shape, seed)
 
+    @abstractmethod
+    def make_seed(self, seed):
+        pass
+
     def __repr__(self):
-        return f"lenses: {self.lenses} | sources: {self.sources} | foreground: {self.foreground}"
+        return f"LensPrior(lenses: {self.lenses} | sources: {self.sources} | foreground: {self.foreground})"
