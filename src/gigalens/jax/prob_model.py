@@ -56,18 +56,17 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.centroids_errors_y = [jnp.array(cey) for cey in centroids_errors_y]
             self.n_position = 2 * jnp.size(jnp.concatenate(self.centroids_x, axis=0))
 
-        example = prior.sample(seed=random.PRNGKey(0))
-        size = int(jnp.size(tree_flatten(example)[0]))
-        self.pack_bij = tfb.Chain(
-            [
-                tfb.pack_sequence_as(example),
-                tfb.Split(size),
-                tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
-                tfb.Transpose(perm=(1, 0)),
-            ]
-        )
-        self.unconstraining_bij = prior.experimental_default_event_space_bijector()
-        self.bij = tfb.Chain([self.unconstraining_bij, self.pack_bij])
+    @property
+    def pack_bij(self):
+        return self.prior.pack_bij
+
+    @property
+    def unconstraining_bij(self):
+        return self.prior.pack_unconstraining_bij
+
+    @property
+    def bij(self):
+        return self.prior.bij
 
     @functools.partial(jit, static_argnums=(0, 1))
     def stats_pixels(self, simulator: sim.LensSimulator, params):
