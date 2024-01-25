@@ -11,6 +11,7 @@ from typing import List, Dict
 
 import gigalens.jax.simulator as sim
 import gigalens.model
+import gigalens.profile
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
