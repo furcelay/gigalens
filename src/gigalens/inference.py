@@ -22,7 +22,7 @@ class ModellingSequenceInterface(ABC):
 
     def __init__(
             self,
-            phys_model: gigalens.model.PhysicalModel,
+            phys_model: gigalens.model.PhysicalModelBase,
             prob_model: gigalens.model.ProbabilisticModel,
             sim_config: gigalens.simulator.SimulatorConfig,
     ):

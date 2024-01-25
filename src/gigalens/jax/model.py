@@ -11,6 +11,7 @@ from typing import List, Dict
 
 import gigalens.jax.simulator as sim
 import gigalens.model
+import gigalens.profile
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
@@ -228,9 +229,9 @@ class PhysicalModel(gigalens.model.PhysicalModelBase):
                                             distance_constants)
         self.lenses_constants = [{k: jnp.array(v) for k, v in d.items()}
                                  for d in self.lenses_constants]
-        self.lens_light_constants = [{k: jnp.array(v)  for k, v in d.items()}
+        self.lens_light_constants = [{k: jnp.array(v) for k, v in d.items()}
                                      for d in self.lens_light_constants]
-        self.source_light_constants = [{k: jnp.array(v)  for k, v in d.items()}
+        self.source_light_constants = [{k: jnp.array(v) for k, v in d.items()}
                                        for d in self.source_light_constants]
         self.distance_constants = [{k: jnp.array(v) for k, v in d.items()}
                                    for d in self.distance_constants]

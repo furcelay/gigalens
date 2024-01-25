@@ -121,13 +121,12 @@ class CoreSersic(Sersic):
                 Ie
                 * (1 + (Rb / R) ** alpha) ** (gamma / alpha)
                 * tf.math.exp(
-            -bn
-            * (
-                    (R ** alpha + Rb ** alpha)
-                    / R_sersic ** alpha ** 1.0
-                    / (alpha * n_sersic)
-            )
-            - 1.0
-        )
+                    -bn * (
+                            (R ** alpha + Rb ** alpha)
+                            / R_sersic ** alpha ** 1.0
+                            / (alpha * n_sersic)
+                    )
+                    - 1.0
+                )
         )
         return ret[tf.newaxis, ...] if self.use_lstsq else ret

@@ -48,7 +48,8 @@ class DPIESeries(MassSeries):
             f_xx.append(f_xx_i)
             f_xy.append(f_xy_i)
             f_yy.append(f_yy_i)
-        f_xx, f_xy, f_yy = jnp.stack(f_xx, axis=-1), jnp.stack(f_xy, axis=-1), jnp.stack(f_yy, axis=-1)  # x, y, batch, (n+1)
+        # stack: x, y, batch, (n+1)
+        f_xx, f_xy, f_yy = jnp.stack(f_xx, axis=-1), jnp.stack(f_xy, axis=-1), jnp.stack(f_yy, axis=-1)
         return f_xx, f_xy, f_yy
 
     @functools.partial(jit, static_argnums=(0,))
