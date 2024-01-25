@@ -39,6 +39,7 @@ class LightProfile(Parameterized, ABC):
         self.depth = 1
         if not self.use_lstsq:
             self.params.append(self._amp)
+        print(self.params)
 
     @property
     def use_lstsq(self):

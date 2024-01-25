@@ -4,7 +4,7 @@ from typing import List, Dict
 import gigalens.profile
 
 
-class PhysicalModelBase:
+class PhysicalModelBase(ABC):
     """A physical model for the lensing system.
 
     Args:

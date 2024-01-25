@@ -16,7 +16,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         observed_image (:obj:`tf.Tensor` or :obj:`numpy.array`): The observed image.
         background_rms (float): The estimated background Gaussian noise level
         exp_time (float): The exposure time (used for calculating Poisson shot noise)
-        prior (:obj:`gigalens.tf.prior.LensPrior`)
         pack_bij (:obj:`tfp.bijectors.Bijector`): A bijector that reshapes from a tensor to a structured parameter
             object (i.e., dictionaries of parameter values). Does not change the input parameters whatsoever, it only
             reshapes them.

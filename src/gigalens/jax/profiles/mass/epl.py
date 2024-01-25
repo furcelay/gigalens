@@ -33,14 +33,14 @@ class EPL(MassProfile):
         Cs2, Ss2 = jnp.cos(2 * angle), jnp.sin(2 * angle)
 
         def update(n, val):
-            prefac = -f * (2 * n - (2 - t)) / (2 * n + (2 - t))
-            last_x, last_y, fx, fy = val
-            last_x, last_y = prefac * (Cs2 * last_x - Ss2 * last_y), prefac * (
+            prefac_ = -f * (2 * n - (2 - t)) / (2 * n + (2 - t))
+            last_x, last_y, fx_, fy_ = val
+            last_x, last_y = prefac_ * (Cs2 * last_x - Ss2 * last_y), prefac_ * (
                     Ss2 * last_x + Cs2 * last_y
             )
-            fx += last_x
-            fy += last_y
-            return last_x, last_y, fx, fy
+            fx_ += last_x
+            fy_ += last_y
+            return last_x, last_y, fx_, fy_
 
         _, _, fx, fy = lax.fori_loop(1, self.niter, update, (Cs, Ss, Cs, Ss))
         prefac = (2 * b) / (1 + q) * ((b / R) ** (t - 1))
