@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from lenstronomy.Util.kernel_util import subgrid_kernel
 
-import gigalens.tf.phisical_model
+import gigalens.tf.physical_model
 import gigalens.simulator
 
 
