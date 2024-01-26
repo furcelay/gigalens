@@ -87,7 +87,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         source_params = params['source_light']
         beta_points = []
         beta_barycentre = []
-        for x_i, y_i, sp in zip(x, y, source_params, self.phys_model.distance_constants):
+        for x_i, y_i, sp in zip(x, y, source_params):
             deflect_rat = sp['deflection_ratio']
             beta_points_i = jnp.stack(self.beta(x_i, y_i, params['lens_mass'], deflect_rat), axis=0)
             beta_points_i = jnp.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
@@ -125,7 +125,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
 
         source_params = params['source_light']
         magnifications = []
-        for x_i, y_i, sp in zip(x, y, source_params, self.phys_model.distance_constants):
+        for x_i, y_i, sp in zip(x, y, source_params):
             deflect_rat = sp['deflection_ratio']
             magnifications.append(self.magnification(x_i, y_i, params['lens_mass'], deflect_rat))
         return magnifications
@@ -171,16 +171,17 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
 
         # deflected source light, considering redshift
-        for lightModel, lp, lc in zip(self.phys_model.source_light,
-                                      source_light_params, self.phys_model.source_light_constants):
+        for lightModel, p, c in zip(self.phys_model.source_light,
+                                    source_light_params, self.phys_model.source_light_constants):
 
-            deflect_rat = lp.pop('deflection_ratio')  # TODO: check if this is safe
+            pc = (p | c)
+            deflect_rat = pc.pop('deflection_ratio')
             if no_deflection:
                 beta_x, beta_y = self.img_X, self.img_Y
             else:
                 beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
 
-            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(beta_x, beta_y, **lp, **lc))
+            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(beta_x, beta_y, **pc))
 
         img = jnp.transpose(img, (2, 0, 1))
         img = jnp.nan_to_num(img)
