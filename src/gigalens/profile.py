@@ -43,7 +43,6 @@ class LightProfile(Parameterized, ABC):
             self.params.append(self._amp)
         if is_source:
             self.params.append("deflection_ratio")
-        print(self.params)
 
     @property
     def use_lstsq(self):
@@ -80,6 +79,9 @@ class LightProfile(Parameterized, ABC):
     @abstractmethod
     def light(self, x, y, **kwargs):
         pass
+
+    def __str__(self):
+        return f"{self.name}(use_lstsq={self.use_lstsq}, is_source={self.is_source})"
 
 
 class MassProfile(Parameterized, ABC):

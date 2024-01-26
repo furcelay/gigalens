@@ -29,7 +29,7 @@ class ProfilePrior:
             else:
                 try:
                     self.constants[k] = float(p)
-                except ValueError:
+                except TypeError:
                     raise RuntimeError(f"Invalid value {p} for parameter '{k}', should be number or tfp distribution.")
         if self.variables:
             self.prior = self._tfd.JointDistributionNamed(self.variables)
@@ -147,11 +147,13 @@ def make_prior_and_model(
         sources = []
     if foreground is None:
         foreground = []
+    for s in sources:
+        s.profile.is_source = True
+        if 'deflection_ratio' not in s.params:
+            s.params['deflection_ratio'] = 1.
     lenses = [ProfilePrior(m.profile, m.params) for m in lenses]
     sources = [ProfilePrior(m.profile, m.params) for m in sources]
     foreground = [ProfilePrior(m.profile, m.params) for m in foreground]
-    for s in sources:
-        s.profile.is_source = True
     lens_prior = LensPrior(lenses, sources, foreground)
     return lens_prior.get_prior(), lens_prior.get_physical_model()
 

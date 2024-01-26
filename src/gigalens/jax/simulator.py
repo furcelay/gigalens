@@ -87,12 +87,14 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                                x,
                                y,
                                params):
+        lens_params = params.get('lens_mass', {})
         source_light_params = params.get('source_light', {})
         source_light_constants = self.phys_model.constants.get('source_light', {})
-        lens_params = params.get('lens_mass', {})
         beta_points = []
         beta_barycentre = []
-        for x_i, y_i, sp, sc in zip(x, y, source_light_params, source_light_constants):
+        for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
+            sp = source_light_params.get(str(i), {})
+            sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
             beta_points_i = jnp.stack(self.beta(x_i, y_i, lens_params, deflect_rat), axis=0)
             beta_points_i = jnp.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
@@ -130,11 +132,13 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                              x,
                              y,
                              params):
+        lens_params = params.get('lens_mass', {})
         source_light_params = params.get('source_light', {})
         source_light_constants = self.phys_model.constants.get('source_light', {})
-        lens_params = params.get('lens_mass', {})
         magnifications = []
-        for x_i, y_i, sp, sc in zip(x, y, source_light_params, source_light_constants):
+        for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
+            sp = source_light_params.get(str(i), {})
+            sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
             magnifications.append(self.magnification(x_i, y_i, lens_params, deflect_rat))
         return magnifications
