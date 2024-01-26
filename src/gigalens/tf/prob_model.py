@@ -4,7 +4,6 @@ from tensorflow_probability import distributions as tfd, bijectors as tfb
 
 import gigalens.model
 import gigalens.tf.simulator
-import gigalens.tf.prior
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
@@ -29,7 +28,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     def __init__(
         self,
-        prior: gigalens.tf.prior.LensPrior,
+        prior: tfd.Distribution,
         observed_image=None,
         background_rms=None,
         exp_time=None,
@@ -56,6 +55,19 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
             self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
             self.n_position = 2 * tf.size(tf.concat(self.centroids_x, axis=0), out_type=tf.float32)
+
+        example = prior.sample(seed=0)
+        size = int(tf.size(tf.nest.flatten(example)))
+        self.pack_bij = tfb.Chain(
+            [
+                tfb.pack_sequence_as(example),
+                tfb.Split(size),
+                tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
+                tfb.Transpose(perm=(1, 0)),
+            ]
+        )
+        self.unconstraining_bij = prior.experimental_default_event_space_bijector()
+        self.bij = tfb.Chain([self.unconstraining_bij, self.pack_bij])
 
     @tf.function
     def stats_pixels(self, simulator: gigalens.tf.simulator.LensSimulator, params):

@@ -77,18 +77,6 @@ class ProbabilisticModel(ABC):
         self.centroids_x_batch = None
         self.centroids_y_batch = None
 
-    @property
-    def pack_bij(self):
-        return self.prior.pack_bij
-
-    @property
-    def unconstraining_bij(self):
-        return self.prior.pack_unconstraining_bij
-
-    @property
-    def bij(self):
-        return self.prior.bij
-
     @abstractmethod
     def log_prob(self, simulator, z):
         """

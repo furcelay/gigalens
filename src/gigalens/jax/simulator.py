@@ -65,18 +65,24 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             self.flat_kernel = jnp.transpose(kernel, (2, 3, 0, 1))
 
     @functools.partial(jit, static_argnums=(0,))
-    def beta(self, x, y, lens_params: List[Dict]):
+    def beta(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         beta_x, beta_y = x, y
-        for lens, p in zip(self.phys_model.lenses, lens_params):
-            f_xi, f_yi = lens.deriv(x, y, **p)
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
+            f_xi, f_yi = lens.deriv(x, y, **p, **c)
             beta_x, beta_y = beta_x - f_xi, beta_y - f_yi
         return beta_x, beta_y
 
     @functools.partial(jit, static_argnums=(0,))
-    def magnification(self, x, y, lens_params: List[Dict]):
+    def magnification(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         f_xx, f_xy, f_yx, f_yy = jnp.zeros_like(x), jnp.zeros_like(x), jnp.zeros_like(x), jnp.zeros_like(x)
-        for lens, p in zip(self.phys_model.lenses, lens_params):
-            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p)
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
+            f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
             f_xx += f_xx_i
             f_xy += f_xy_i
             f_yx += f_yx_i
@@ -86,37 +92,49 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return 1. / det_A  # attention, if dividing by zero
 
     @functools.partial(jit, static_argnums=(0,))
-    def convergence(self, x, y, lens_params: List[Dict]):
+    def convergence(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         kappa = jnp.zeros_like(x)
-        for lens, p in zip(self.phys_model.lenses, lens_params):
-            kappa += lens.convergence(x, y, **p)
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
+            kappa += lens.convergence(x, y, **p, **c)
         return kappa
 
     @functools.partial(jit, static_argnums=(0,))
-    def shear(self, x, y, lens_params: List[Dict]):
+    def shear(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         gamma1, gamma2 = jnp.zeros_like(x), jnp.zeros_like(x)
-        for lens, p in zip(self.phys_model.lenses, lens_params):
-            g1, g2 = lens.shear(x, y, **p)
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
+            g1, g2 = lens.shear(x, y, **p, **c)
             gamma1 += g1
             gamma2 += g2
         return gamma1, gamma2
 
     @functools.partial(jit, static_argnums=(0,))
     def simulate(self, params, no_deflection=False):
-        params = self.include_constants(params)
-        lens_params = params['lens_mass']
-        lens_light_params = params['lens_light']
-        source_light_params = params['source_light']
+        lens_params = params.get('lens_mass', {})
+        lens_light_params = params.get('lens_light', {})
+        source_light_params = params.get('source_light', {})
+
+        lens_light_constants = self.phys_model.constants.get('lens_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
 
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
 
         img = jnp.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
-        for lightModel, p in zip(self.phys_model.lens_light, lens_light_params):
-            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(self.img_X, self.img_Y, **p,))
-        for lightModel, p in zip(self.phys_model.source_light, source_light_params):
-            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(beta_x, beta_y, **p))
+        for i, lightModel in enumerate(self.phys_model.lens_light):
+            p = lens_light_params.get(str(i), {})
+            c = lens_light_constants.get(str(i), {})
+            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(self.img_X, self.img_Y, **p, **c))
+        for i, lightModel in enumerate(self.phys_model.source_light):
+            p = source_light_params.get(str(i), {})
+            c = source_light_constants.get(str(i), {})
+            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(beta_x, beta_y, **p, **c))
         img = jnp.transpose(img, (2, 0, 1))
         img = jnp.nan_to_num(img)
         ret = (
@@ -131,7 +149,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         )
         return jnp.squeeze(ret) * self.conversion_factor
 
-    @functools.partial(jit, static_argnums=(0,))
+    @functools.partial(jit, static_argnums=(0,))  # TODO: update lstsq_simulate
     def lstsq_simulate(
             self,
             params,
@@ -141,20 +159,26 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             return_coeffs=False,
             no_deflection=False,
     ):
-        params = self.include_constants(params)
-        lens_params = params['lens_mass']
-        lens_light_params = params['lens_light']
-        source_light_params = params['source_light']
+        lens_params = params.get('lens_mass', {})
+        lens_light_params = params.get('lens_light', {})
+        source_light_params = params.get('source_light', {})
+
+        lens_light_constants = self.phys_model.constants.get('lens_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
 
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
 
         img = jnp.zeros((0, self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
-        for lightModel, p in zip(self.phys_model.lens_light, lens_light_params):
-            img = jnp.concatenate((img, lightModel.light(self.img_X, self.img_Y, **p)), axis=0)
-        for lightModel, p in zip(self.phys_model.source_light, source_light_params):
-            img = jnp.concatenate((img, lightModel.light(beta_x, beta_y, **p)), axis=0)
+        for i, lightModel in enumerate(self.phys_model.lens_light):
+            p = lens_light_params.get(str(i), {})
+            c = lens_light_constants.get(str(i), {})
+            img = jnp.concatenate((img, lightModel.light(self.img_X, self.img_Y, **p, **c)), axis=0)
+        for i, lightModel in enumerate(self.phys_model.source_light):
+            p = source_light_params.get(str(i), {})
+            c = source_light_constants.get(str(i), {})
+            img = jnp.concatenate((img, lightModel.light(beta_x, beta_y, **p, **c)), axis=0)
 
         img = jnp.nan_to_num(img)
         img = jnp.transpose(img, (3, 0, 1, 2))  # bs, n components, h, w
@@ -175,3 +199,5 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             return coeffs
         ret = jnp.sum(ret * coeffs[:, jnp.newaxis, jnp.newaxis, :], axis=-1)
         return jnp.squeeze(ret)
+
+# TODO: new simulation features for JAX

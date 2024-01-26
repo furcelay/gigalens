@@ -126,6 +126,9 @@ class LensPriorBase(ABC):
             self.constants
         )
 
+    def get_prior(self):
+        return self.prior
+
     def sample(self, shape=(1,), seed=None):
         return self.prior.sample(shape, seed)
 

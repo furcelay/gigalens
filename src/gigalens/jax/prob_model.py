@@ -4,17 +4,17 @@ import numpy as np
 from jax import jit
 from jax import numpy as jnp
 from jax import random
+from jax.tree_util import tree_flatten
 from tensorflow_probability.substrates.jax import distributions as tfd, bijectors as tfb
 
 import gigalens.jax.simulator as sim
 import gigalens.model
-import gigalens.jax.prior
 
 
 class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def __init__(
             self,
-            prior: gigalens.jax.prior.LensPrior,
+            prior: tfd.Distribution,
             observed_image=None,
             background_rms=None,
             exp_time=None,
@@ -42,17 +42,18 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.centroids_errors_y = [jnp.array(cey) for cey in centroids_errors_y]
             self.n_position = 2 * jnp.size(jnp.concatenate(self.centroids_x, axis=0))
 
-    @property
-    def pack_bij(self):
-        return self.prior.pack_bij
-
-    @property
-    def unconstraining_bij(self):
-        return self.prior.pack_unconstraining_bij
-
-    @property
-    def bij(self):
-        return self.prior.bij
+        example = prior.sample(seed=random.PRNGKey(0))
+        size = int(jnp.size(tree_flatten(example)[0]))
+        self.pack_bij = tfb.Chain(
+            [
+                tfb.pack_sequence_as(example),
+                tfb.Split(size),
+                tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
+                tfb.Transpose(perm=(1, 0)),
+            ]
+        )
+        self.unconstraining_bij = prior.experimental_default_event_space_bijector()
+        self.bij = tfb.Chain([self.unconstraining_bij, self.pack_bij])
 
     @functools.partial(jit, static_argnums=(0, 1))
     def stats_pixels(self, simulator: sim.LensSimulator, params):
