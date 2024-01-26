@@ -14,8 +14,9 @@ class Parameterized(ABC):
     _params: List[str]  # Static class level default for parameter names
 
     def __init__(self, *args, **kwargs):
+        # self.constants = constants  TODO: include constants in Parametrized plus a @with_constants decorator
         self.name = self._name
-        self.params = self._params.copy()
+        self.params = self._params.copy()  # [param for param in self._params if param not in constants]
 
     def __str__(self):
         return self.name

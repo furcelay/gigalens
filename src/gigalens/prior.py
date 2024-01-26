@@ -1,7 +1,12 @@
 from typing import Optional, List
+from collections import namedtuple
 
 
-class ProfilePriorBase:
+Prior = namedtuple("Prior", ["profile", "params"])
+
+
+class ProfilePrior:
+
     _tfd = None
 
     def __init__(self, profile, params):
@@ -33,19 +38,19 @@ class ProfilePriorBase:
         return f"{self.profile}(vars:{list(self.variables.keys())},const:{list(self.constants.keys())})"
 
 
-class CompoundPriorBase:
+class CompoundPrior:
     """
-        lenses:    {1: prof1,         2: prof2,    ...}
+        lenses:    [prof1,            prof2]
         prior:     {1: {p1, p2 , p3}, 2: {p1, p2}, ...}
         constants: {1: {p4},          2: {},       ...}
     """
 
     _tfd = None
 
-    def __init__(self, models: List[ProfilePriorBase]):
+    def __init__(self, models: List[ProfilePrior]):
         self.models = models
         self.keys = [str(i) for i in range(len(models))]
-        self.profiles = {str(i): m.profile for i, m in enumerate(models)}
+        self.profiles = [m.profile for m in models]
         self.constants = {str(i): m.constants for i, m in enumerate(models)}
         self.num_free_params = 0
         for m in models:
@@ -57,18 +62,20 @@ class CompoundPriorBase:
             self.prior = self._tfd.JointDistributionNamed(priors)
 
     def __repr__(self):
-        return f"CompoundModel({self.models})"
+        return f"CompoundPrior({self.models})"
 
 
-class LensPriorBase:
+class LensPrior:
+
     _phys_model_cls = None
     _tfd = None
     _tfb = None
+    _seed = 0
 
     def __init__(self,
-                 lenses: Optional[List[ProfilePriorBase]] = None,
-                 sources: Optional[List[ProfilePriorBase]] = None,
-                 foreground: Optional[List[ProfilePriorBase]] = None):
+                 lenses: Optional[List[ProfilePrior]] = None,
+                 sources: Optional[List[ProfilePrior]] = None,
+                 foreground: Optional[List[ProfilePrior]] = None):
 
         if foreground is None:
             foreground = []
@@ -81,9 +88,9 @@ class LensPriorBase:
         self.sources_key = 'source_light'
         self.foreground_key = 'lens_light'
 
-        self.lenses = CompoundPriorBase(lenses)
-        self.sources = CompoundPriorBase(sources)
-        self.foreground = CompoundPriorBase(foreground)
+        self.lenses = CompoundPrior(lenses)
+        self.sources = CompoundPrior(sources)
+        self.foreground = CompoundPrior(foreground)
 
         self.num_free_params = 0
         self.num_free_params += self.sources.num_free_params
@@ -103,8 +110,8 @@ class LensPriorBase:
 
         self.prior = None
         if priors:
-            prior = self._tfd.JointDistributionNamed(priors)
-            example = prior.sample()
+            self.prior = self._tfd.JointDistributionNamed(priors)
+            example = self.prior.sample(seed=self._seed)
             size = self.num_free_params
             self.pack_bij = self._tfb.Chain([
                 self._tfb.pack_sequence_as(example),
@@ -112,7 +119,7 @@ class LensPriorBase:
                 self._tfb.Reshape(event_shape_out=(-1,), event_shape_in=(size, -1)),
                 self._tfb.Transpose(perm=(1, 0)),
             ])
-            self.unconstraining_bij = prior.experimental_default_event_space_bijector()
+            self.unconstraining_bij = self.prior.experimental_default_event_space_bijector()
             self.bij = self._tfb.Chain([self.unconstraining_bij, self.pack_bij])
 
     def get_physical_model(self):
@@ -120,13 +127,31 @@ class LensPriorBase:
             self.lenses.profiles,
             self.sources.profiles,
             self.foreground.profiles,
-            self.lenses.constants,
-            self.sources.constants,
-            self.foreground.constants
+            self.constants
         )
 
-    def sample(self, shape=(1,), seed=None):
-        return self.prior.sample(shape, seed)
+    def get_prior(self):
+        return self.prior
 
     def __repr__(self):
-        return f"lenses: {self.lenses} | sources: {self.sources} | foreground: {self.foreground}"
+        return f"LensPrior(lenses: {self.lenses} | sources: {self.sources} | foreground: {self.foreground})"
+
+
+def make_prior_and_model(
+        lenses: List[Prior] = None,
+        sources: List[Prior] = None,
+        foreground: List[Prior] = None):
+    if lenses is None:
+        lenses = []
+    if sources is None:
+        sources = []
+    if foreground is None:
+        foreground = []
+    lenses = [ProfilePrior(m.profile, m.params) for m in lenses]
+    sources = [ProfilePrior(m.profile, m.params) for m in sources]
+    foreground = [ProfilePrior(m.profile, m.params) for m in foreground]
+    for s in sources:
+        s.profile.is_source = True
+    lens_prior = LensPrior(lenses, sources, foreground)
+    return lens_prior.get_prior(), lens_prior.get_physical_model()
+

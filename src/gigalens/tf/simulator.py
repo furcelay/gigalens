@@ -70,9 +70,12 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             self.flat_kernel = tf.constant(kernel, dtype=tf.float32)
 
     @tf.function
-    def alpha(self, x, y, lens_params: List[Dict]):
+    def alpha(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         f_x, f_y = tf.zeros_like(x), tf.zeros_like(y)
-        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
             f_xi, f_yi = lens.deriv(x, y, **p, **c)
             f_x += f_xi
             f_y += f_yi
@@ -89,12 +92,16 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                                x,
                                y,
                                params):
-        source_params = params['source_light']
+        lens_params = params.get('lens_mass', {})
+        source_light_params = params.get('source_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
         beta_points = []
         beta_barycentre = []
-        for x_i, y_i, sp in zip(x, y, source_params):
-            deflect_rat = sp['deflection_ratio']
-            beta_points_i = tf.stack(self.beta(x_i, y_i, params['lens_mass'], deflect_rat), axis=0)
+        for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
+            sp = source_light_params.get(str(i), {})
+            sc = source_light_constants.get(str(i), {})
+            deflect_rat = (sp | sc)['deflection_ratio']
+            beta_points_i = tf.stack(self.beta(x_i, y_i, lens_params, deflect_rat), axis=0)
             beta_points_i = tf.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
             beta_barycentre_i = tf.math.reduce_mean(beta_points_i, axis=2, keepdims=True)
             beta_points.append(beta_points_i)
@@ -102,9 +109,12 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return beta_points, beta_barycentre
 
     @tf.function
-    def hessian(self, x, y, lens_params: List[Dict]):
+    def hessian(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         f_xx, f_xy, f_yx, f_yy = tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x), tf.zeros_like(x)
-        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
             f_xx_i, f_xy_i, f_yx_i, f_yy_i = lens.hessian(x, y, **p, **c)
             f_xx += f_xx_i
             f_xy += f_xy_i
@@ -127,24 +137,34 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                              x,
                              y,
                              params):
-        source_params = params['source_light']
+        lens_params = params.get('lens_mass', {})
+        source_light_params = params.get('source_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
         magnifications = []
-        for x_i, y_i, sp in zip(x, y, source_params):
-            deflect_rat = sp['deflection_ratio']
-            magnifications.append(self.magnification(x_i, y_i, params['lens_mass'], deflect_rat))
+        for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
+            sp = source_light_params.get(str(i), {})
+            sc = source_light_constants.get(str(i), {})
+            deflect_rat = (sp | sc)['deflection_ratio']
+            magnifications.append(self.magnification(x_i, y_i, lens_params, deflect_rat))
         return magnifications
 
     @tf.function
-    def convergence(self, x, y, lens_params: List[Dict]):
+    def convergence(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         kappa = tf.zeros_like(x)
-        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
             kappa += lens.convergence(x, y, **p, **c)
         return kappa
 
     @tf.function
-    def shear(self, x, y, lens_params: List[Dict]):
+    def shear(self, x, y, lens_params: Dict[str, Dict]):
+        lens_constants = self.phys_model.constants.get('lens_mass', {})
         gamma1, gamma2 = tf.zeros_like(x), tf.zeros_like(x)
-        for lens, p, c in zip(self.phys_model.lenses, lens_params, self.phys_model.lenses_constants):
+        for i, lens in enumerate(self.phys_model.lenses):
+            p = lens_params.get(str(i), {})
+            c = lens_constants.get(str(i), {})
             g1, g2 = lens.shear(x, y, **p, **c)
             gamma1 += g1
             gamma2 += g2
@@ -152,24 +172,19 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
 
     @tf.function
     def simulate(self, params, no_deflection=False):
-        if 'lens_mass' in params:
-            lens_params = params['lens_mass']
-        else:
-            lens_params = [{} for _ in self.phys_model.lenses]
-        if 'lens_light' in params:
-            lens_light_params = params['lens_light']
-        else:
-            lens_light_params = [{} for _ in self.phys_model.lens_light]
-        if 'source_light' in params:
-            source_light_params = params['source_light']
-        else:
-            source_light_params = [{} for _ in self.phys_model.source_light]
+        lens_params = params.get('lens_mass', {})
+        lens_light_params = params.get('lens_light', {})
+        source_light_params = params.get('source_light', {})
+
+        lens_light_constants = self.phys_model.constants.get('lens_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
 
         img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
 
         # lens light
-        for lightModel, p, c in zip(self.phys_model.lens_light, lens_light_params,
-                                    self.phys_model.lens_light_constants):
+        for i, lightModel in enumerate(self.phys_model.lens_light):
+            p = lens_light_params.get(str(i), {})
+            c = lens_light_constants.get(str(i), {})
             img = tf.tensor_scatter_nd_add(img,
                                            self.region,
                                            lightModel.light(self.img_X, self.img_Y, **p, **c))
@@ -178,8 +193,9 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
 
         # deflected source light, considering redshift
-        for lightModel, p, c in zip(self.phys_model.source_light,
-                                    source_light_params, self.phys_model.source_light_constants):
+        for i, lightModel in enumerate(self.phys_model.source_light):
+            p = source_light_params.get(str(i), {})
+            c = source_light_constants.get(str(i), {})
             pc = (p | c)
             deflect_rat = pc.pop('deflection_ratio')
             if no_deflection:
@@ -210,7 +226,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return tf.squeeze(ret) * self.conversion_factor
 
     @tf.function
-    def lstsq_simulate(
+    def lstsq_simulate(  # TODO: update lstsq_simulate
             self,
             params,
             observed_image,
@@ -219,37 +235,34 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             return_coeffs=False,
             no_deflection=False,
     ):
-        if 'lens_mass' in params:
-            lens_params = params['lens_mass']
-        else:
-            lens_params = [{} for _ in self.phys_model.lenses]
-        if 'lens_light' in params:
-            lens_light_params = params['lens_light']
-        else:
-            lens_light_params = [{} for _ in self.phys_model.lens_light]
-        if 'source_light' in params:
-            source_light_params = params['source_light']
-        else:
-            source_light_params = [{} for _ in self.phys_model.source_light]
+        lens_params = params.get('lens_mass', {})
+        lens_light_params = params.get('lens_light', {})
+        source_light_params = params.get('source_light', {})
+
+        lens_light_constants = self.phys_model.constants.get('lens_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
 
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
             beta_x, beta_y = self.img_X, self.img_Y
-
         img = tf.zeros((0, self.wcs.n_x, self.wcs.n_y, self.bs))
-        for lightModel, p in zip(self.phys_model.lens_light, lens_light_params):
+        for i, lightModel in enumerate(self.phys_model.lens_light):
+            p = lens_light_params.get(str(i), {})
+            c = lens_light_constants.get(str(i), {})
             img = tf.concat(
                 (img,
                  tf.scatter_nd(self.region,
-                               lightModel.light(self.img_X, self.img_Y, **p)[tf.newaxis, ...],
+                               lightModel.light(self.img_X, self.img_Y, **p, **c)[tf.newaxis, ...],
                                img.shape)),
                 axis=0,
             )
-        for lightModel, p in zip(self.phys_model.source_light, source_light_params):
+        for i, lightModel in enumerate(self.phys_model.source_light):
+            p = source_light_params.get(str(i), {})
+            c = source_light_constants.get(str(i), {})
             img = tf.concat(
                 (img,
                  tf.scatter_nd(self.region,
-                               lightModel.light(beta_x, beta_y, **p)[tf.newaxis, ...],
+                               lightModel.light(beta_x, beta_y, **p, **c)[tf.newaxis, ...],
                                img.shape)),
             )
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
@@ -296,14 +309,13 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
 
     @tf.function
     def simulate_source(self, params):
-        if 'source_light' in params:
-            source_light_params = params['source_light']
-        else:
-            source_light_params = [{} for _ in self.phys_model.source_light]
+        source_light_params = params.get('source_light', {})
+        source_light_constants = self.phys_model.constants.get('source_light', {})
 
         img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
-        for lightModel, p, c in zip(self.phys_model.source_light, source_light_params,
-                                    self.phys_model.source_light_constants):
+        for i, lightModel in enumerate(self.phys_model.source_light):
+            p = source_light_params.get(str(i), {})
+            c = source_light_constants.get(str(i), {})
             img = tf.tensor_scatter_nd_add(img,
                                            self.region,
                                            lightModel.light(self.img_X, self.img_Y, **p, **c))
@@ -327,14 +339,13 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return tf.squeeze(ret) * self.conversion_factor
 
     def simulate_lens_light(self, params):
-        if 'lens_light' in params:
-            lens_light_params = params['lens_light']
-        else:
-            lens_light_params = [{} for _ in self.phys_model.lens_light]
+        lens_light_params = params.get('lens_light', {})
+        lens_light_constants = self.phys_model.constants.get('lens_light', {})
 
         img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
-        for lightModel, p, c in zip(self.phys_model.lens_light, lens_light_params,
-                                    self.phys_model.lens_light_constants):
+        for i, lightModel in enumerate(self.phys_model.lens_light):
+            p = lens_light_params.get(str(i), {})
+            c = lens_light_constants.get(str(i), {})
             img = tf.tensor_scatter_nd_add(img,
                                            self.region,
                                            lightModel.light(self.img_X, self.img_Y, **p, **c))
@@ -358,22 +369,19 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return tf.squeeze(ret) * self.conversion_factor
 
     def simulate_images(self, params):
-        if 'lens_mass' in params:
-            lens_params = params['lens_mass']
-        else:
-            lens_params = [{} for _ in self.phys_model.lenses]
-        if 'source_light' in params:
-            source_light_params = params['source_light']
-        else:
-            source_light_params = [{} for _ in self.phys_model.source_light]
+        lens_params = params.get('lens_mass', {})
+        source_light_params = params.get('source_light', {})
+
+        source_light_constants = self.phys_model.constants.get('source_light', {})
 
         # deflection
         f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
 
         # deflected source light, considering redshift
         img = tf.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
-        for lightModel, p, c in zip(self.phys_model.source_light,
-                                    source_light_params, self.phys_model.source_light_constants):
+        for i, lightModel in enumerate(self.phys_model.source_light):
+            p = source_light_params.get(str(i), {})
+            c = source_light_constants.get(str(i), {})
             pc = (p | c)
             deflect_rat = pc.pop('deflection_ratio')
             beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
