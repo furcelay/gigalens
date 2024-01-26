@@ -64,7 +64,8 @@ class DPIE(SPMassProfile):
         f_yy = (f_yy_core - f_yy_cut)
         return scale * sp.Matrix([f_xx, f_xy, f_yx, f_yy])
 
-    def complex_hessian_single(self, x, y, r_w, e, q):
+    @staticmethod
+    def complex_hessian_single(x, y, r_w, e, q):
         sqe = sp.sqrt(e)
         qinv = 1. / q
         cxro = (1. + e) * (1. + e)  # rem ^ 2 = x ^ 2 / (1 + e ^ 2) + y ^ 2 / (1 - e ^ 2) Eq 2.3.6

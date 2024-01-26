@@ -11,6 +11,9 @@ class Sersic(gigalens.profile.LightProfile):
     _params = ["R_sersic", "n_sersic", "center_x", "center_y"]
     _amp = "Ie"
 
+    def __init__(self, use_lstsq=False, is_source=False):
+        super(Sersic, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
+
     @functools.partial(jit, static_argnums=(0,))
     def light(self, x, y, R_sersic, n_sersic, center_x, center_y, Ie=None):
         R = self.distance(x, y, center_x, center_y)
@@ -38,6 +41,9 @@ class SersicEllipse(Sersic):
     _name = "SERSIC_ELLIPSE"
     _params = ["R_sersic", "n_sersic", "e1", "e2", "center_x", "center_y"]
 
+    def __init__(self, use_lstsq=False, is_source=False):
+        super(SersicEllipse, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
+
     @functools.partial(jit, static_argnums=(0,))
     def light(self, x, y, R_sersic, n_sersic, e1, e2, center_x, center_y, Ie=None):
         R = self.distance(x, y, center_x, center_y, e1, e2)
@@ -59,6 +65,9 @@ class CoreSersic(Sersic):
         "center_x",
         "center_y",
     ]
+
+    def __init__(self, use_lstsq=False, is_source=False):
+        super(CoreSersic, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
 
     @functools.partial(jit, static_argnums=(0,))
     def light(

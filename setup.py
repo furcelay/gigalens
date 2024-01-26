@@ -44,6 +44,7 @@ setup(
         "tensorflow-probability>=0.19.0",
         "lenstronomy",
         "tqdm",
+        "numpy",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

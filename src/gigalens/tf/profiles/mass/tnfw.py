@@ -38,7 +38,8 @@ class TNFW(MassProfile):
         a = 4 * rho0 * Rs * gx / X ** 2
         return a * x, a * y
 
-    def F(self, x):
+    @staticmethod
+    def F(x):
         # x is r/Rs
         x_shape = tf.shape(x)
         x = tf.reshape(x, (-1,))
