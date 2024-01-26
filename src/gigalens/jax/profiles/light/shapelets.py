@@ -13,8 +13,8 @@ class Shapelets(gigalens.profile.LightProfile):
     _name = "SHAPELETS"
     _params = ["beta", "center_x", "center_y"]
 
-    def __init__(self, n_max, use_lstsq=False, interpolate=True):
-        super(Shapelets, self).__init__(use_lstsq=use_lstsq)
+    def __init__(self, n_max, use_lstsq=False, is_source=False, interpolate=True):
+        super(Shapelets, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
         del self._params[-1]  # Deletes the amp parameter, to be added again later below with numbering convention
         self.n_layers = int((n_max + 1) * (n_max + 2) / 2)
         self.n_max = n_max

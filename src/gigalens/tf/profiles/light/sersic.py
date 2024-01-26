@@ -23,8 +23,8 @@ class Sersic(gigalens.profile.LightProfile):
     _params = ["R_sersic", "n_sersic", "center_x", "center_y"]
     _amp = "Ie"
 
-    def __init__(self, use_lstsq=False):
-        super(Sersic, self).__init__(use_lstsq=use_lstsq)
+    def __init__(self, use_lstsq=False, is_source=False):
+        super(Sersic, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
 
     @tf.function
     def light(self, x, y, R_sersic, n_sersic, center_x, center_y, Ie=None):
@@ -68,8 +68,8 @@ class SersicEllipse(Sersic):
     _params = ["R_sersic", "n_sersic", "e1", "e2", "center_x", "center_y"]
     _amp = "Ie"
 
-    def __init__(self, use_lstsq=False):
-        super(SersicEllipse, self).__init__(use_lstsq=use_lstsq)
+    def __init__(self, use_lstsq=False, is_source=False):
+        super(SersicEllipse, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
 
     @tf.function
     def light(self, x, y, R_sersic, n_sersic, e1, e2, center_x, center_y, Ie=None):
@@ -95,8 +95,8 @@ class CoreSersic(Sersic):
     ]
     _amp = "Ie"
 
-    def __init__(self, use_lstsq=False):
-        super(CoreSersic, self).__init__(use_lstsq=use_lstsq)
+    def __init__(self, use_lstsq=False, is_source=False):
+        super(CoreSersic, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
 
     @tf.function
     def light(
