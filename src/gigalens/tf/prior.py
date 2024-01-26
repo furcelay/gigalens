@@ -1,45 +1,12 @@
-from gigalens import prior
+from gigalens.prior import ProfilePrior, CompoundPrior, LensPrior, Prior, make_prior_and_model
 from gigalens.tf.physical_model import PhysicalModel
 from tensorflow_probability import distributions as tfd, bijectors as tfb
-from typing import Optional, List
 
+ProfilePrior._tfd = tfd
+CompoundPrior._tfd = tfd
+LensPrior._tfd = tfd
+LensPrior._tfb = tfb
+LensPrior._seed = 0
+LensPrior._phys_model_cls = PhysicalModel
 
-class ProfilePrior(prior.ProfilePriorBase):
-
-    _tfd = tfd
-
-    def __init__(self, profile, params):
-        super(ProfilePrior, self).__init__(profile, params)
-
-
-class CompoundPrior(prior.CompoundPriorBase):
-
-    _tfd = tfd
-
-    def __init__(self, models: List[ProfilePrior]):
-        super(CompoundPrior, self).__init__(models)
-
-
-class LensPrior(prior.LensPriorBase):
-
-    _compound_prior_cls = CompoundPrior
-    _phys_model_cls = PhysicalModel
-    _tfd = tfd
-    _tfb = tfb
-
-    def __init__(self,
-                 lenses: Optional[List[ProfilePrior]] = None,
-                 sources: Optional[List[ProfilePrior]] = None,
-                 foreground: Optional[List[ProfilePrior]] = None):
-
-        if foreground is None:
-            foreground = []
-        if sources is None:
-            sources = []
-        if lenses is None:
-            lenses = []
-
-        super(LensPrior, self).__init__(lenses, sources, foreground)
-
-    def make_seed(self, seed):
-        return seed
+__all__ = ["Prior", "make_prior_and_model"]
