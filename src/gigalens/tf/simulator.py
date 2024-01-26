@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from lenstronomy.Util.kernel_util import subgrid_kernel
 
-import gigalens.tf.model
+import gigalens.model
 import gigalens.simulator
 
 
@@ -13,7 +13,7 @@ import gigalens.simulator
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
-            phys_model: gigalens.tf.model.PhysicalModel,
+            phys_model: gigalens.model.PhysicalModelBase,
             sim_config: gigalens.simulator.SimulatorConfig,
             bs: int,
     ):
