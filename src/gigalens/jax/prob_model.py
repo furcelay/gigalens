@@ -146,7 +146,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
                 jnp.repeat(cy[..., jnp.newaxis], bs, axis=-1)) for cy in self.centroids_y]
 
 
-class BackwardProbModel(gigalens.model.ProbabilisticModel):
+class BackwardProbModel(gigalens.model.ProbabilisticModel):  # TODO: update BackwardProbModel
     def __init__(
             self, prior: tfd.Distribution, observed_image, background_rms, exp_time
     ):

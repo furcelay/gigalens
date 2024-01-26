@@ -177,7 +177,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             ) for cy in self.centroids_y]
 
 
-class BackwardProbModel(gigalens.model.ProbabilisticModel):
+class BackwardProbModel(gigalens.model.ProbabilisticModel):  # TODO: update BackwardProbModel
     """
     Probabilistic model defined using the observed image as an estimator for the noise variance map. Linear parameters
     *are* automatically solved for using least squares.
