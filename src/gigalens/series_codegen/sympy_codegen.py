@@ -30,14 +30,12 @@ def sympy_series(expr, var, order):
 
 class ListTFPrinter(TensorflowPrinter):
     def _print_MatrixBase(self, expr):
-        tensorflow_f = ""
         data = ", ".join([", ".join([self._print(j) for j in i]) for i in expr.tolist()])
         return data
 
 
 class ListJAXPrinter(JaxPrinter):
     def _print_MatrixBase(self, expr):
-        tensorflow_f = ""
         data = ", ".join([", ".join([self._print(j) for j in i]) for i in expr.tolist()])
         return data
 

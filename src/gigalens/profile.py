@@ -15,7 +15,7 @@ class Parameterized(ABC):
 
     def __init__(self, *args, **kwargs):
         self.name = self._name
-        self.params = self._params
+        self.params = self._params.copy()
 
     def __str__(self):
         return self.name
