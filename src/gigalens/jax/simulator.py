@@ -19,7 +19,7 @@ import gigalens.simulator
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
-            phys_model: gigalens.model.PhysicalModel,
+            phys_model: gigalens.model.PhysicalModelBase,
             sim_config: gigalens.simulator.SimulatorConfig,
             bs: int,
     ):
