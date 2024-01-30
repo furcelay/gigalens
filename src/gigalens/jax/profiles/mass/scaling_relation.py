@@ -13,9 +13,10 @@ class ScalingRelation(MassProfile):
             self,
             profile: MassProfile,
             scaling_params: List,
-            lum_star: float,
+            mag_star: float,
             scaling_params_power: Dict[str, float],
-            galaxy_catalogue: Dict[str, List],
+            galaxy_catalogue,
+            mag_key='mag',
             chunk_size=None,
             **kwargs,
     ):
@@ -28,10 +29,11 @@ class ScalingRelation(MassProfile):
         self.scaling_params = scaling_params
         super(ScalingRelation, self).__init__(**kwargs)
 
-        self.lum_star = jnp.array(lum_star)
+        self.mag_star = jnp.array(mag_star)
         self.power = {k: jnp.array(v) for k, v in scaling_params_power.items()}
         self.galaxy_cat = galaxy_catalogue
-        self._luminosities = jnp.array(self.galaxy_cat['lum'])
+        lum = 10**((mag_star - self.galaxy_cat[mag_key]) / 2.5)
+        self._luminosities = jnp.array(lum)
         self.n_galaxy = len(self._luminosities)
 
         if chunk_size is None:
@@ -54,7 +56,7 @@ class ScalingRelation(MassProfile):
                  for k in self.not_scaling_params}
             )
             self._unscaled_params.append(
-                {k: (self._luminosities[chunk] / lum_star) ** self.power[k]
+                {k: (self._luminosities[chunk]) ** self.power[k]
                  for k in self.scaling_params}
             )
 
