@@ -9,9 +9,11 @@ class DPIESubhaloSeries(ScalingRelationSeries):
     _name = 'Scaled-SeriesExpansion-dPIE'
 
     def __init__(self,
+                 *,
                  mag_star: float,
-                 galaxy_catalogue: Dict[str, List],
+                 galaxy_catalogue,
                  scaling_params_power=None,
+                 params=None,
                  order=3,
                  chunk_size=None):
 
@@ -20,6 +22,7 @@ class DPIESubhaloSeries(ScalingRelationSeries):
         profile = DPIESeries(order=order)
 
         super(DPIESubhaloSeries, self).__init__(profile=profile,
+                                                params=params,
                                                 order=order,
                                                 mag_star=mag_star,
                                                 scaling_params=['theta_E', 'r_core', 'r_cut'],
