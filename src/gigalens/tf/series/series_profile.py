@@ -74,29 +74,20 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x), tf.math.reduce_all(y == self.y))
-
-        def from_cache():
-            var = kwargs[self.series_param]
-            f_x_ = self._evaluate_series(var, self._f_x)
-            f_y_ = self._evaluate_series(var, self._f_y)
-            return f_x_, f_y_
-
-        f_x, f_y = tf.cond(cond, from_cache, lambda: self.precompute_deriv(0, x, y, **kwargs))
+        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
+                                   tf.math.reduce_all(y == self.y))
+        f_x, f_y = tf.cond(cond,
+                           lambda: self._get_deriv(**kwargs),
+                           lambda: self.precompute_deriv(0, x, y, **kwargs))
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x), tf.math.reduce_all(y == self.y))
-
-        def from_cache():
-            var = kwargs[self.series_param]
-            f_xx_ = self._evaluate_series(var, self._f_xx)
-            f_xy_ = self._evaluate_series(var, self._f_xy)
-            f_yy_ = self._evaluate_series(var, self._f_yy)
-            return f_xx_, f_xy_, f_yy_
-
-        f_xx, f_xy, f_yy = tf.cond(cond, from_cache, lambda: self.precompute_hessian(0, x, y, **kwargs))
+        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
+                                   tf.math.reduce_all(y == self.y))
+        f_xx, f_xy, f_yy = tf.cond(cond,
+                                   lambda: self._get_hessian(**kwargs),
+                                   lambda: self.precompute_hessian(0, x, y, **kwargs))
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
@@ -105,3 +96,15 @@ class MassSeries(MassProfile, ABC):
         fact = tf.exp(tf.math.lgamma(n + 1))
         powers = tf.math.pow((tf.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return tf.reduce_sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
+
+    def _get_deriv(self, **kwargs):
+        var = kwargs[self.series_param]
+        f_x_ = self._evaluate_series(var, self._f_x)
+        f_y_ = self._evaluate_series(var, self._f_y)
+        return f_x_, f_y_
+
+    def _get_hessian(self, **kwargs):
+        var = kwargs[self.series_param]
+        f_x_ = self._evaluate_series(var, self._f_x)
+        f_y_ = self._evaluate_series(var, self._f_y)
+        return f_x_, f_y_
