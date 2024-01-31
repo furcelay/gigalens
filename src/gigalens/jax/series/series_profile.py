@@ -82,21 +82,23 @@ class MassSeries(MassProfile, ABC):
     @functools.partial(jit, static_argnums=(0,))
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
+        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
         f_x, f_y = lax.cond(cond,
-                            functools.partial(self._get_deriv, **kwargs),
-                            functools.partial(self.precompute_deriv, 0, x, y, **kwargs))
+                            lambda: self._get_deriv(**kwargs),
+                            lambda: self.precompute_deriv(0, x, y, **kwargs, **constants)[..., 0])
         return scale * f_x, scale * f_y
 
     @functools.partial(jit, static_argnums=(0,))
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
+        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
         f_xx, f_xy, f_yy = lax.cond(cond,
-                            functools.partial(self._get_hessian, **kwargs),
-                            functools.partial(self.precompute_hessian, 0, x, y, **kwargs))
+                            lambda: self._get_hessian(**kwargs),
+                            lambda: self.precompute_hessian(0, x, y, **kwargs, **constants)[..., 0])
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @functools.partial(jit, static_argnums=(0,))

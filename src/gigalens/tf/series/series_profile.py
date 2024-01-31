@@ -74,20 +74,22 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
+        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
         cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
                                    tf.math.reduce_all(y == self.y))
         f_x, f_y = tf.cond(cond,
                            lambda: self._get_deriv(**kwargs),
-                           lambda: self.precompute_deriv(0, x, y, **kwargs))
+                           lambda: self.precompute_deriv(0, x, y, **kwargs, **constants)[..., 0])
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
+        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
         cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
                                    tf.math.reduce_all(y == self.y))
         f_xx, f_xy, f_yy = tf.cond(cond,
                                    lambda: self._get_hessian(**kwargs),
-                                   lambda: self.precompute_hessian(0, x, y, **kwargs))
+                                   lambda: self.precompute_hessian(0, x, y, **kwargs, **constants)[..., 0])
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
