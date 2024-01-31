@@ -99,19 +99,21 @@ class MassSeries(MassProfile, ABC):
                             functools.partial(self.precompute_hessian, 0, x, y, **kwargs))
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
-    @functools.partial(jit)
+    @functools.partial(jit, static_argnums=(0,))
     def _evaluate_series(self, var, coefs):
         n = jnp.arange(self.order + 1)  # (n+1)
         fact = factorial(n)
         powers = jnp.power((jnp.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return jnp.sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
 
+    @functools.partial(jit, static_argnums=(0,))
     def _get_deriv(self, **kwargs):
         var = kwargs[self.series_param]
         f_x_ = self._evaluate_series(var, self._f_x)
         f_y_ = self._evaluate_series(var, self._f_y)
         return f_x_, f_y_
 
+    @functools.partial(jit, static_argnums=(0,))
     def _get_hessian(self, **kwargs):
         var = kwargs[self.series_param]
         f_x_ = self._evaluate_series(var, self._f_x)
