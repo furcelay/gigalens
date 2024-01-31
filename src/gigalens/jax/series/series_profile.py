@@ -98,8 +98,9 @@ class MassSeries(MassProfile, ABC):
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
         f_xx, f_xy, f_yy = lax.cond(cond,
-                                    lambda: self._get_hessian(**kwargs),
-                                    lambda: self._compute_hessian(x, y, **kwargs))
+                                    self._get_hessian,
+                                    self._compute_hessian,
+                                    x, y, kwargs)
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @functools.partial(jit, static_argnums=(0,))
@@ -110,14 +111,14 @@ class MassSeries(MassProfile, ABC):
         return jnp.sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
 
     @functools.partial(jit, static_argnums=(0,))
-    def _get_deriv(self, **kwargs):
+    def _get_deriv(self, x, y, kwargs):
         var = kwargs[self.series_param]
         f_x = self._evaluate_series(var, self._f_x)
         f_y = self._evaluate_series(var, self._f_y)
         return f_x, f_y
 
     @functools.partial(jit, static_argnums=(0,))
-    def _get_hessian(self, **kwargs):
+    def _get_hessian(self, x, y, kwargs):
         var = kwargs[self.series_param]
         f_xx = self._evaluate_series(var, self._f_xx)
         f_xy = self._evaluate_series(var, self._f_xy)
@@ -125,14 +126,14 @@ class MassSeries(MassProfile, ABC):
         return f_xx, f_xy, f_yy
 
     @functools.partial(jit, static_argnums=(0,))
-    def _compute_deriv(self, x, y, **kwargs):
+    def _compute_deriv(self, x, y, kwargs):
         precomputing_warn()
         constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         f_x, f_y = self.precompute_deriv(0, x, y, **kwargs, **constants)
         return f_x[..., 0], f_y[..., 0]
 
     @functools.partial(jit, static_argnums=(0,))
-    def _compute_hessian(self, x, y, **kwargs):
+    def _compute_hessian(self, x, y, kwargs):
         precomputing_warn()
         constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         f_xx, f_xy, f_yy = self.precompute_hessian(0, x, y, **kwargs, **constants)
