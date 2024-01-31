@@ -8,6 +8,8 @@ from jax import lax
 from gigalens.tf.profile import MassProfile
 from abc import ABC, abstractmethod
 
+import warnings
+from jax.experimental import host_callback
 
 __all__ = ['MassSeries']
 
@@ -96,9 +98,12 @@ class MassSeries(MassProfile, ABC):
         constants = {k: v for k, v in self.constants_dict if k not in kwargs}
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
+        lax.cond(cond,
+                 lambda: None,
+                 lambda: host_callback.id_tap(precomputing_warn, None))
         f_xx, f_xy, f_yy = lax.cond(cond,
-                            lambda: self._get_hessian(**kwargs),
-                            lambda: self.precompute_hessian(0, x, y, **kwargs, **constants)[..., 0])
+                                    lambda: self._get_hessian(**kwargs),
+                                    lambda: self.precompute_hessian(0, x, y, **kwargs, **constants)[..., 0])
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @functools.partial(jit, static_argnums=(0,))
@@ -135,3 +140,7 @@ class MassSeries(MassProfile, ABC):
 tree_util.register_pytree_node(MassSeries,
                                MassSeries._tree_flatten,
                                MassSeries._tree_unflatten)
+
+
+def precomputing_warn(_):
+    warnings.warn(f"Calling precomputed profile with new positions, the function will be fully evaluated.")
