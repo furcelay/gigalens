@@ -74,7 +74,7 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
+        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
                                    tf.math.reduce_all(y == self.y))
         f_x, f_y = tf.cond(cond,
@@ -84,7 +84,7 @@ class MassSeries(MassProfile, ABC):
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
+        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
                                    tf.math.reduce_all(y == self.y))
         f_xx, f_xy, f_yy = tf.cond(cond,

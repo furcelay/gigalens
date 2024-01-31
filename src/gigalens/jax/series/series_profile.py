@@ -82,7 +82,7 @@ class MassSeries(MassProfile, ABC):
     @functools.partial(jit, static_argnums=(0,))
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
+        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
         f_x, f_y = lax.cond(cond,
@@ -93,7 +93,7 @@ class MassSeries(MassProfile, ABC):
     @functools.partial(jit, static_argnums=(0,))
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict if k not in kwargs}
+        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
         f_xx, f_xy, f_yy = lax.cond(cond,
