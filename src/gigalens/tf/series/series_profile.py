@@ -72,22 +72,19 @@ class MassSeries(MassProfile, ABC):
     def precompute_hessian(self, order, x, y, **kwargs):
         pass
 
-    def deriv(self, x, y, **kwargs):
+    def deriv(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y
         scale = kwargs[self.amplitude_param]
-        tf.debugging.assert_equal(x, self.x,
-                                  message="Calling precomputed profile with new positions")
-        tf.debugging.assert_equal(y, self.y,
-                                  message="Calling precomputed profile with new positions")
-        f_x, f_y = self._get_deriv(**kwargs)
+        var = kwargs[self.series_param]
+        f_x = self._evaluate_series(var, self._f_x)
+        f_y = self._evaluate_series(var, self._f_y)
         return scale * f_x, scale * f_y
 
-    def hessian(self, x, y, **kwargs):
+    def hessian(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y
         scale = kwargs[self.amplitude_param]
-        tf.debugging.assert_equal(x, self.x,
-                                  message="Calling precomputed profile with new positions")
-        tf.debugging.assert_equal(y, self.y,
-                                  message="Calling precomputed profile with new positions")
-        f_xx, f_xy, f_yy = self._get_hessian(**kwargs)
+        var = kwargs[self.series_param]
+        f_xx = self._evaluate_series(var, self._f_xx)
+        f_xy = self._evaluate_series(var, self._f_xy)
+        f_yy = self._evaluate_series(var, self._f_yy)
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
@@ -96,16 +93,3 @@ class MassSeries(MassProfile, ABC):
         fact = tf.exp(tf.math.lgamma(n + 1))
         powers = tf.math.pow((tf.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return tf.reduce_sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
-
-    def _get_deriv(self, **kwargs):
-        var = kwargs[self.series_param]
-        f_x = self._evaluate_series(var, self._f_x)
-        f_y = self._evaluate_series(var, self._f_y)
-        return f_x, f_y
-
-    def _get_hessian(self, **kwargs):
-        var = kwargs[self.series_param]
-        f_xx = self._evaluate_series(var, self._f_xx)
-        f_xy = self._evaluate_series(var, self._f_xy)
-        f_yy = self._evaluate_series(var, self._f_yy)
-        return f_xx, f_xy, f_yy
