@@ -186,7 +186,7 @@ class DPIE(MassProfile):
 
     @functools.partial(jit, static_argnums=(0,))
     def _param_conv(self, e1, e2):
-        phi = jnp.atan2(e2, e1) / 2
+        phi = jnp.arctan2(e2, e1) / 2
         e = jnp.minimum(jnp.sqrt(e1 ** 2 + e2 ** 2), 0.9999)
         q = (1 - e) / (1 + e)
         return e, q, phi
@@ -251,7 +251,7 @@ class DPIE(MassProfile):
         # compute the zr = log(zis_rc / zis_rcut) = log(aaa + bbb * I)
         norm2 = aaa ** 2 + bbb ** 2
         zr_re = jnp.log(jnp.sqrt(norm2))
-        zr_im = jnp.atan2(bbb, aaa)
+        zr_im = jnp.arctan2(bbb, aaa)
 
         # now compute final result: zres = zci * log(zr)
         zres_re = zci_re * zr_re - zci_im * zr_im

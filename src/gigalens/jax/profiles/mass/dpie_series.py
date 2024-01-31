@@ -54,7 +54,7 @@ class DPIESeries(MassSeries):
 
     @functools.partial(jit, static_argnums=(0,))
     def _param_conv(self, e1, e2):
-        phi = jnp.atan2(e2, e1) / 2
+        phi = jnp.arctan2(e2, e1) / 2
         e = jnp.sqrt(e1 ** 2 + e2 ** 2)
         q = (1 - e) / (1 + e)
         return e, q, phi
