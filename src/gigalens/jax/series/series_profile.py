@@ -1,9 +1,8 @@
 import functools
 
 import jax.numpy as jnp
-from jax import jit, tree_util
+from jax import jit
 from jax.scipy.special import factorial
-from jax import lax
 
 from gigalens.tf.profile import MassProfile
 from abc import ABC, abstractmethod
@@ -80,25 +79,20 @@ class MassSeries(MassProfile, ABC):
         pass
 
     @functools.partial(jit, static_argnums=(0,))
-    def deriv(self, x, y, **kwargs):
+    def deriv(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        cond = jnp.logical_and(jnp.array_equal(x, self.x),
-                               jnp.array_equal(y, self.y))
-        f_x, f_y = lax.cond(cond,
-                            lambda: self._get_deriv(**kwargs),
-                            lambda: self.precompute_deriv(0, x, y, **kwargs, **constants)[..., 0])
+        var = kwargs[self.series_param]
+        f_x = self._evaluate_series(var, self._f_x)
+        f_y = self._evaluate_series(var, self._f_y)
         return scale * f_x, scale * f_y
 
     @functools.partial(jit, static_argnums=(0,))
-    def hessian(self, x, y, **kwargs):
+    def hessian(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        cond = jnp.logical_and(jnp.array_equal(x, self.x),
-                               jnp.array_equal(y, self.y))
-        f_xx, f_xy, f_yy = lax.cond(cond,
-                            lambda: self._get_hessian(**kwargs),
-                            lambda: self.precompute_hessian(0, x, y, **kwargs, **constants)[..., 0])
+        var = kwargs[self.series_param]
+        f_xx = self._evaluate_series(var, self._f_xx)
+        f_xy = self._evaluate_series(var, self._f_xy)
+        f_yy = self._evaluate_series(var, self._f_yy)
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @functools.partial(jit, static_argnums=(0,))
@@ -107,31 +101,3 @@ class MassSeries(MassProfile, ABC):
         fact = factorial(n)
         powers = jnp.power((jnp.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return jnp.sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
-
-    @functools.partial(jit, static_argnums=(0,))
-    def _get_deriv(self, **kwargs):
-        var = kwargs[self.series_param]
-        f_x_ = self._evaluate_series(var, self._f_x)
-        f_y_ = self._evaluate_series(var, self._f_y)
-        return f_x_, f_y_
-
-    @functools.partial(jit, static_argnums=(0,))
-    def _get_hessian(self, **kwargs):
-        var = kwargs[self.series_param]
-        f_x_ = self._evaluate_series(var, self._f_x)
-        f_y_ = self._evaluate_series(var, self._f_y)
-        return f_x_, f_y_
-
-    def _tree_flatten(self):
-        children = ((self.x, self.y), self.constants_dict)  # arrays
-        aux_data = {'order': self.order}  # static values
-        return (children, aux_data)
-
-    @classmethod
-    def _tree_unflatten(cls, aux_data, children):
-        return cls(*children, **aux_data)
-
-
-tree_util.register_pytree_node(MassSeries,
-                               MassSeries._tree_flatten,
-                               MassSeries._tree_unflatten)
