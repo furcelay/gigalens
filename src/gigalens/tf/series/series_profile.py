@@ -74,27 +74,29 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        if tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y):
-            # use cached deriv
+        cond = tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y)
+
+        def from_cache():
             var = kwargs[self.series_param]
-            f_x = self._evaluate_series(var, self._f_x)
-            f_y = self._evaluate_series(var, self._f_y)
-        else:
-            # comopute order 0 with new values
-            f_x, f_y = self.precompute_deriv(0, x, y, **kwargs)
+            f_x_ = self._evaluate_series(var, self._f_x)
+            f_y_ = self._evaluate_series(var, self._f_y)
+            return f_x_, f_y_
+
+        f_x, f_y = tf.cond(cond, from_cache, lambda: self.precompute_deriv(0, x, y, **kwargs))
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        if tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y):
-            # use cached hessian
+        cond = tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y)
+
+        def from_cache():
             var = kwargs[self.series_param]
-            f_xx = self._evaluate_series(var, self._f_xx)
-            f_xy = self._evaluate_series(var, self._f_xy)
-            f_yy = self._evaluate_series(var, self._f_yy)
-        else:
-            # comopute order 0 with new values
-            f_xx, f_xy, f_yy = self.precompute_hessian(0, x, y, **kwargs)
+            f_xx_ = self._evaluate_series(var, self._f_xx)
+            f_xy_ = self._evaluate_series(var, self._f_xy)
+            f_yy_ = self._evaluate_series(var, self._f_yy)
+            return f_xx_, f_xy_, f_yy_
+
+        f_xx, f_xy, f_yy = tf.cond(cond, from_cache, lambda: self.precompute_hessian(0, x, y, **kwargs))
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
