@@ -20,7 +20,7 @@ class DPIESeries(MassSeries):
     def __init__(self, order=3):
         super(DPIESeries, self).__init__(order=order)
 
-    @functools.partial(jit, static_argnums=(0,))
+    @functools.partial(jit, static_argnums=(0, 1))
     def precompute_deriv(self, order, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
         # theta_E is not used
         e, q, phi = self._param_conv(e1, e2)
@@ -35,7 +35,7 @@ class DPIESeries(MassSeries):
         f_x, f_y = jnp.stack(f_x, axis=-1), jnp.stack(f_y, axis=-1)  # x, y, batch, (n+1)
         return f_x, f_y
 
-    @functools.partial(jit, static_argnums=(0,))
+    @functools.partial(jit, static_argnums=(0, 1))
     def precompute_hessian(self, order, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
         # theta_E is not used
         e, q, phi = self._param_conv(e1, e2)
