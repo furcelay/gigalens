@@ -87,7 +87,7 @@ class MassSeries(MassProfile, ABC):
         return scale * f_x, scale * f_y
 
     @functools.partial(jit, static_argnums=(0,))
-    def hessian(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y
+    def hessian(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y1
         scale = kwargs[self.amplitude_param]
         var = kwargs[self.series_param]
         f_xx = self._evaluate_series(var, self._f_xx)
@@ -102,16 +102,12 @@ class MassSeries(MassProfile, ABC):
         powers = jnp.power((jnp.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return jnp.sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
 
-    def _tree_flatten(self):
-        children = ((self.x, self.y), self.constants_dict)  # arrays
-        aux_data = {'order': self.order}  # static values
-        return (children, aux_data)
-
-    @classmethod
-    def _tree_unflatten(cls, aux_data, children):
-        return cls(*children, **aux_data)
-
-
-tree_util.register_pytree_node(MassSeries,
-                               MassSeries._tree_flatten,
-                               MassSeries._tree_unflatten)
+    def __eq__(self, other):
+        equal = True
+        equal &= jnp.array_equal(other.x, self.x)
+        equal &= jnp.array_equal(other.y, self.y)
+        equal &= jnp.array_equal(other._f_x, self._f_x)
+        equal &= jnp.array_equal(other._f_y, self._f_y)
+        equal &= jnp.array_equal(other._f_xx, self._f_xx)
+        equal &= jnp.array_equal(other._f_xy, self._f_xy)
+        equal &= jnp.array_equal(other._f_yy, self._f_yy)
