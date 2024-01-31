@@ -8,7 +8,6 @@ from jax import lax
 from gigalens.tf.profile import MassProfile
 from abc import ABC, abstractmethod
 
-import warnings
 from jax.experimental import host_callback
 
 __all__ = ['MassSeries']
@@ -84,12 +83,10 @@ class MassSeries(MassProfile, ABC):
     @functools.partial(jit, static_argnums=(0,))
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
-        f_x, f_y = lax.cond(cond,
-                            lambda: self._get_deriv(**kwargs),
-                            lambda: self._compute_deriv(x, y, **kwargs))
+        host_callback.id_tap(precomputing_error, cond)
+        f_x, f_y = self._get_deriv(**kwargs)
         return scale * f_x, scale * f_y
 
     @functools.partial(jit, static_argnums=(0,))
@@ -97,10 +94,8 @@ class MassSeries(MassProfile, ABC):
         scale = kwargs[self.amplitude_param]
         cond = jnp.logical_and(jnp.array_equal(x, self.x),
                                jnp.array_equal(y, self.y))
-        f_xx, f_xy, f_yy = lax.cond(cond,
-                                    self._get_hessian,
-                                    self._compute_hessian,
-                                    x, y, kwargs)
+        host_callback.id_tap(precomputing_error, cond)
+        f_xx, f_xy, f_yy = self._get_hessian(**kwargs)
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @functools.partial(jit, static_argnums=(0,))
@@ -111,33 +106,19 @@ class MassSeries(MassProfile, ABC):
         return jnp.sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
 
     @functools.partial(jit, static_argnums=(0,))
-    def _get_deriv(self, x, y, kwargs):
+    def _get_deriv(self, **kwargs):
         var = kwargs[self.series_param]
         f_x = self._evaluate_series(var, self._f_x)
         f_y = self._evaluate_series(var, self._f_y)
         return f_x, f_y
 
     @functools.partial(jit, static_argnums=(0,))
-    def _get_hessian(self, x, y, kwargs):
+    def _get_hessian(self, **kwargs):
         var = kwargs[self.series_param]
         f_xx = self._evaluate_series(var, self._f_xx)
         f_xy = self._evaluate_series(var, self._f_xy)
         f_yy = self._evaluate_series(var, self._f_yy)
         return f_xx, f_xy, f_yy
-
-    @functools.partial(jit, static_argnums=(0,))
-    def _compute_deriv(self, x, y, kwargs):
-        precomputing_warn()
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        f_x, f_y = self.precompute_deriv(0, x, y, **kwargs, **constants)
-        return f_x[..., 0], f_y[..., 0]
-
-    @functools.partial(jit, static_argnums=(0,))
-    def _compute_hessian(self, x, y, kwargs):
-        precomputing_warn()
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        f_xx, f_xy, f_yy = self.precompute_hessian(0, x, y, **kwargs, **constants)
-        return f_xx[..., 0], f_xy[..., 0], f_yy[..., 0]
 
     def _tree_flatten(self):
         children = ((self.x, self.y), self.constants_dict)  # arrays
@@ -154,6 +135,6 @@ tree_util.register_pytree_node(MassSeries,
                                MassSeries._tree_unflatten)
 
 
-def precomputing_warn():
-    host_callback.id_tap(lambda *args: warnings.warn("Calling precomputed profile with new positions, the function "
-                                                     "will be fully evaluated."), 0)
+def precomputing_error(cond):
+    if not cond:
+        raise ValueError("Calling precomputed profile with new positions")

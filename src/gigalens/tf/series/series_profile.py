@@ -74,22 +74,20 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
-                                   tf.math.reduce_all(y == self.y))
-        f_x, f_y = tf.cond(cond,
-                           lambda: self._get_deriv(**kwargs),
-                           lambda: self._compute_deriv(x, y, **kwargs))
+        tf.debugging.assert_equal(x, self.x,
+                                  message="Calling precomputed profile with new positions")
+        tf.debugging.assert_equal(y, self.y,
+                                  message="Calling precomputed profile with new positions")
+        f_x, f_y = self._get_deriv(**kwargs)
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x),
-                                   tf.math.reduce_all(y == self.y))
-        f_xx, f_xy, f_yy = tf.cond(cond,
-                                   lambda: self._get_hessian(**kwargs),
-                                   lambda: self._compute_hessian(x, y, **kwargs))
+        tf.debugging.assert_equal(x, self.x,
+                                  message="Calling precomputed profile with new positions")
+        tf.debugging.assert_equal(y, self.y,
+                                  message="Calling precomputed profile with new positions")
+        f_xx, f_xy, f_yy = self._get_hessian(**kwargs)
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
@@ -111,15 +109,3 @@ class MassSeries(MassProfile, ABC):
         f_xy = self._evaluate_series(var, self._f_xy)
         f_yy = self._evaluate_series(var, self._f_yy)
         return f_xx, f_xy, f_yy
-
-    def _compute_deriv(self, x, y, **kwargs):
-        # precomputing_warn()
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        f_x, f_y = self.precompute_deriv(0, x, y, **kwargs, **constants)
-        return f_x[..., 0], f_y[..., 0]
-
-    def _compute_hessian(self, x, y, **kwargs):
-        # precomputing_warn()
-        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
-        f_xx, f_xy, f_yy = self.precompute_hessian(0, x, y, **kwargs, **constants)
-        return f_xx[..., 0], f_xy[..., 0], f_yy[..., 0]
