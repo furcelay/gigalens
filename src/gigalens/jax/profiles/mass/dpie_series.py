@@ -21,13 +21,13 @@ class DPIESeries(MassSeries):
         super(DPIESeries, self).__init__(order=order)
 
     @functools.partial(jit, static_argnums=(0,))
-    def precompute_deriv(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
+    def precompute_deriv(self, order, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
         # theta_E is not used
         e, q, phi = self._param_conv(e1, e2)
         x, y = x - center_x, y - center_y
         x, y = self._rotate(x, y, phi)
         f_x, f_y = [], []
-        for i in range(self.order + 1):
+        for i in range(order + 1):
             f_x_i, f_y_i = deriv_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
             f_x_i, f_y_i = self._rotate(f_x_i, f_y_i, -phi)
             f_x.append(f_x_i)
@@ -36,13 +36,13 @@ class DPIESeries(MassSeries):
         return f_x, f_y
 
     @functools.partial(jit, static_argnums=(0,))
-    def precompute_hessian(self, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
+    def precompute_hessian(self, order, x, y, theta_E, r_core, r_cut, e1, e2, center_x, center_y):
         # theta_E is not used
         e, q, phi = self._param_conv(e1, e2)
         x, y = x - center_x, y - center_y
         x, y = self._rotate(x, y, phi)
         f_xx, f_xy, f_yy = [], [], []
-        for i in range(self.order + 1):
+        for i in range(order + 1):
             f_xx_i, f_xy_i, _, f_yy_i = hessian_fns[i](x, y, e, r_core, r_cut)  # x, y, batch
             f_xx_i, f_xy_i, f_yy_i = self._hessian_rotate(f_xx_i, f_xy_i, f_yy_i, -phi)
             f_xx.append(f_xx_i)
