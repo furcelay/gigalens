@@ -79,7 +79,7 @@ class MassSeries(MassProfile, ABC):
                                    tf.math.reduce_all(y == self.y))
         f_x, f_y = tf.cond(cond,
                            lambda: self._get_deriv(**kwargs),
-                           lambda: self.precompute_deriv(0, x, y, **kwargs, **constants)[..., 0])
+                           lambda: self._compute_deriv(x, y, **kwargs))
         return scale * f_x, scale * f_y
 
     def hessian(self, x, y, **kwargs):
@@ -89,7 +89,7 @@ class MassSeries(MassProfile, ABC):
                                    tf.math.reduce_all(y == self.y))
         f_xx, f_xy, f_yy = tf.cond(cond,
                                    lambda: self._get_hessian(**kwargs),
-                                   lambda: self.precompute_hessian(0, x, y, **kwargs, **constants)[..., 0])
+                                   lambda: self._compute_hessian(x, y, **kwargs))
         return scale * f_xx, scale * f_xy, scale * f_xy, scale * f_yy
 
     @tf.function
@@ -101,12 +101,24 @@ class MassSeries(MassProfile, ABC):
 
     def _get_deriv(self, **kwargs):
         var = kwargs[self.series_param]
-        f_x_ = self._evaluate_series(var, self._f_x)
-        f_y_ = self._evaluate_series(var, self._f_y)
-        return f_x_, f_y_
+        f_x = self._evaluate_series(var, self._f_x)
+        f_y = self._evaluate_series(var, self._f_y)
+        return f_x, f_y
 
     def _get_hessian(self, **kwargs):
         var = kwargs[self.series_param]
-        f_x_ = self._evaluate_series(var, self._f_x)
-        f_y_ = self._evaluate_series(var, self._f_y)
-        return f_x_, f_y_
+        f_x = self._evaluate_series(var, self._f_x)
+        f_y = self._evaluate_series(var, self._f_y)
+        return f_x, f_y
+
+    def _compute_deriv(self, x, y, **kwargs):
+        # precomputing_warn()
+        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
+        f_x, f_y = self.precompute_deriv(0, x, y, **kwargs, **constants)
+        return f_x[..., 0], f_y[..., 0]
+
+    def _compute_hessian(self, x, y, **kwargs):
+        # precomputing_warn()
+        constants = {k: v for k, v in self.constants_dict.items() if k not in kwargs}
+        f_xx, f_xy, f_yy = self.precompute_hessian(0, x, y, **kwargs, **constants)
+        return f_xx[..., 0], f_xy[..., 0], f_yy[..., 0]
