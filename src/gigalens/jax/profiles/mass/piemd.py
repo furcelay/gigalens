@@ -118,7 +118,7 @@ class DPIE(MassProfile):
         x, y = self._rotate(x, y, phi)
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         scale = theta_E * r_cut / (r_cut - r_core)
-        alpha_x, alpha_y = self.complex_deriv_dual(x, y, r_core, r_cut, e, q)
+        alpha_x, alpha_y = self._complex_deriv_dual(x, y, r_core, r_cut, e, q)
         alpha_x, alpha_y = self._rotate(alpha_x, alpha_y, -phi)
         return scale * alpha_x, scale * alpha_y
 
@@ -133,8 +133,8 @@ class DPIE(MassProfile):
         x, y = self._rotate(x, y, phi)
         r_core, r_cut = self._sort_ra_rs(r_core, r_cut)
         scale = theta_E * r_cut / (r_cut - r_core)
-        f_xx_core, f_xy_core, f_yy_core = self.complex_hessian_single(x, y, r_core, e, q)
-        f_xx_cut, f_xy_cut, f_yy_cut = self.complex_hessian_single(x, y, r_cut, e, q)
+        f_xx_core, f_xy_core, f_yy_core = self._complex_hessian_single(x, y, r_core, e, q)
+        f_xx_cut, f_xy_cut, f_yy_cut = self._complex_hessian_single(x, y, r_cut, e, q)
         f_xx = scale * (f_xx_core - f_xx_cut)
         f_xy = f_yx = scale * (f_xy_core - f_xy_cut)
         f_yy = scale * (f_yy_core - f_yy_cut)
@@ -203,102 +203,92 @@ class DPIE(MassProfile):
         return r_core, r_cut
 
     @functools.partial(jit, static_argnums=(0,))
-    def complex_deriv_dual(self, x, y, r_core, r_cut, e, q):
+    def _complex_deriv_dual(self, x, y, r_core, r_cut, e, q):
         sqe = jnp.sqrt(e)
         rem2 = x ** 2 / (1. + e) ** 2 + y ** 2 / (1. - e) ** 2
 
-        zci_re = 0
-        zci_im = -0.5 * (1. - e ** 2) / sqe
-
-        # r_core: zsi_rc = (a + bi)/(c + di)
-        znum_rc_re = q * x  # a
-        znum_rc_im = 2. * sqe * jnp.sqrt(r_core ** 2 + rem2) - y / q  # b
-        zden_rc_re = x  # c
-        zden_rc_im = 2. * r_core * sqe - y  # d
-
-        # r_cut: zsi_rcut = (a + ei)/(c + fi)
-        # znum_rcut_re = znum_rc_re  # a
-        znum_rcut_im = 2. * sqe * jnp.sqrt(r_cut ** 2 + rem2) - y / q  # e
-        # zden_rcut_re = zden_rc_re  # c
-        zden_rcut_im = 2. * r_cut * sqe - y  # f
-
-        """
-        compute the ratio zis_rc / zis_rcut:
-        zis_rc / zis_rcut = (znum_rc / zden_rc) / (znum_rcut / zden_rcut)
-        zis_rc / zis_rcut = ((a + b * I) / (c + d * I)) / ((a + e * I) / (c + f * I));
-        zis_rc / zis_rcut = (a * c + a * f * I + b * c * I - b * f) / (a * c + a * d * I + c * e * I - d * e);
-        zis_rc / zis_rcut = (aa + bb * I) / (cc + dd * I)
-        znum_rc = a + b * I
-        zden_rc = c + d * I
-        znum_rcut = a + e * I
-        zden_rcut = c + f * I
-        aa = (a * c - b * f);
-        bb = (a * f + b * c);
-        cc = (a * c - d * e);
-        dd = (a * d + c * e);
-        """
-        aa = (znum_rc_re * zden_rc_re - znum_rc_im * zden_rcut_im)
-        bb = (znum_rc_re * zden_rcut_im + znum_rc_im * zden_rc_re)
-        cc = (znum_rc_re * zden_rc_re - zden_rc_im * znum_rcut_im)
-        dd = (znum_rc_re * zden_rc_im + zden_rc_re * znum_rcut_im)
-
-        # zis_rc / zis_rcut = ((aa * cc + bb * dd) / norm) + ((bb * cc - aa * dd) / norm) * I
-        # zis_rc / zis_rcut = aaa + bbb * I
-        norm = (cc ** 2 + dd ** 2)
-        aaa = (aa * cc + bb * dd) / norm
-        bbb = (bb * cc - aa * dd) / norm
-
-        # compute the zr = log(zis_rc / zis_rcut) = log(aaa + bbb * I)
-        norm2 = aaa ** 2 + bbb ** 2
-        zr_re = jnp.log(jnp.sqrt(norm2))
-        zr_im = jnp.arctan2(bbb, aaa)
-
-        # now compute final result: zres = zci * log(zr)
-        zres_re = zci_re * zr_re - zci_im * zr_im
-        zres_im = zci_im * zr_re + zci_re * zr_im
-        return zres_re, zres_im
+        z_frac_re, z_frac_im = self._optimal_complex_divide_double(
+            q * x,
+            2. * sqe * jnp.sqrt(r_core ** 2 + rem2) - y / q,
+            x,
+            2. * r_core * sqe - y,
+            2. * sqe * jnp.sqrt(r_cut ** 2 + rem2) - y / q,
+            2. * r_cut * sqe - y
+        )
+        z_r_re, z_r_im = self._complex_log(z_frac_re, z_frac_im)
+        scale = -0.5 * (1. - e ** 2) / sqe
+        # f_x = Re(scale * z_r * i)
+        # f_y = Im(scale * z_r * i)
+        return - scale * z_r_im, scale * z_r_re
 
     @functools.partial(jit, static_argnums=(0,))
-    def complex_hessian_single(self, x, y, r_w, e, q):
+    def _complex_hessian_single(self, x, y, r_w, e, q):
+        """
+        I = (f_x + f_y * i)
+        with I in Eq 4.1.2 in Kassiola & Kovner
+        I = A * ln(u / v)) --> I' = A * (u'/u - v'/v)
+
+        A = scale * i
+        u = cx * x + (-cy * y + 2 * sqe * wrem) * i
+        v = x + (-y + 2 * r_w * sqe) *i
+
+        du_dx = cx + 2 * sqe * x / (cx * wrem) * i
+        du_dy = (-cy + 2 * sqe * y / (cy * wrem)) * i
+
+        dv_dx = 1
+        dv_dy = -i
+
+        f_xx = Re(dI_dx)
+        f_xy = f_yx = Re(dI_dy) = Im(dI_dx)
+        f_yy = Im(dI_dy)
+
+        simplifying we get to:
+        """
+
         sqe = jnp.sqrt(e)
         qinv = 1. / q
-        cxro = (1. + e) * (1. + e)  # rem ^ 2 = x ^ 2 / (1 + e ^ 2) + y ^ 2 / (1 - e ^ 2) Eq 2.3.6
-        cyro = (1. - e) * (1. - e)
-        ci = 0.5 * (1. - e ** 2) / sqe
-        wrem = jnp.sqrt(
-            r_w ** 2 + x ** 2 / cxro + y ** 2 / cyro)  # wrem ^ 2 = r_w ^ 2 + rem ^ 2 with r_w core radius
-        """
-        zden = cpx(x, (2. * r_w * sqe - y)) # denominator
-        znum = cpx(q * x, (2. * sqe * wrem - y / q)) # numerator
+        cx = (1. + e) * (1. + e)
+        cy = (1. - e) * (1. - e)
+        scale = 0.5 * (1. - e ** 2) / sqe
+        rem2 = x ** 2 / cx + y ** 2 / cy
+        wrem = jnp.sqrt(r_w ** 2 + rem2)
 
-        zdidx = acpx(dcpx(cpx(2. * ci * sqe * x / cxro / wrem, -q * ci), znum),
-                     dcpx(cpx(0., ci), zden)) # dI / dx
-        with I in Eq 4.1.2
-        zdidy = acpx(dcpx(cpx(-ci / q + 2. * ci * sqe * y / cyro / wrem, 0.), znum),
-                     dcpx(cpx(ci, 0.), zden)) # dI / dy
-        with I in Eq 4.1.2
-        # in Eq
-        4.1
-        .2
-        I = A * ln(u / v)) == > dI / dx = A * (u'/u-1/v) because v'=1
-        res.a = b0 * zdidx.re
-        res.b = res.d = b0 * (zdidy.re + zdidx.im) / 2.
-        res.c = b0 * zdidy.im
-        """
-        den1 = 2. * sqe * wrem - y * qinv
-        den1 = q ** 2 * x ** 2 + den1 ** 2
-        num2 = 2. * r_w * sqe - y
-        den2 = x ** 2 + num2 ** 2
+        u2 = q ** 2 * x ** 2 + (2. * sqe * wrem - y * qinv) ** 2  # |u|**2
+        v_im = 2. * r_w * sqe - y
+        v2 = x ** 2 + v_im ** 2  # |v|**2
 
-        didxre = ci * (q * (2. * sqe * x ** 2 / cxro / wrem - 2. * sqe * wrem + y * qinv) / den1 + num2 / den2)
-
-        # didxim = ci * ((2 * sqe * x * y * qinv / cxro / wrem - q * q * x - 4 * e * x / cxro) / den1 + x / den2)
-        didyre = ci * ((2 * sqe * x * y * q / cyro / wrem - x) / den1 + x / den2)
-
-        didyim = ci * ((2 * sqe * wrem * qinv - y * qinv ** 2 - 4 * e * y / cyro +
-                        2 * sqe * y ** 2 / cyro / wrem * qinv) / den1 - num2 / den2)
-
-        f_xx = didxre
-        f_xy = didyre  # (didyre + didxim) / 2.
-        f_yy = didyim
+        f_xx = scale * (q * (2. * sqe * x ** 2 / cx / wrem - 2. * sqe * wrem + y * qinv) / u2 + v_im / v2)
+        f_xy = scale * ((2 * sqe * x * y * q / cy / wrem - x) / u2 + x / v2)
+        f_yy = scale * ((2 * sqe * wrem * qinv - y * qinv ** 2 - 4 * e * y / cy +
+                         2 * sqe * y ** 2 / cy / wrem * qinv) / u2 - v_im / v2)
         return f_xx, f_xy, f_yy
+
+
+    @staticmethod
+    @jit
+    def _complex_divide(a, b, c, d):  # TODO: check if builtin complex functions are faster
+        """
+        z = (a + b * i) / (c + d * i)
+        """
+        z_den_norm2 = c ** 2 + d ** 2
+        return (a * c + b * d) / z_den_norm2, (b * c - a * d) / z_den_norm2
+
+    @functools.partial(jit, static_argnums=(0,))
+    def _optimal_complex_divide_double(self, a, b, c, d, e, f):
+        """
+        z = ((a + b * i) / (c + d * i)) / ((a + e * i) / (c + f * i))
+          = ((a * c - b * f) + (a * f  + b * c) * i) / ((a * c - d * e) + (a * d + c * e) * i)
+        """
+        return self._complex_divide(a * c - b * f, a * f + b * c,
+                                    a * c - d * e, a * d + c * e)
+
+    @staticmethod
+    @jit
+    def _complex_log(a, b):
+        """
+        z = log(a + b * i)
+        """
+        norm2 = a ** 2 + b ** 2
+        z_re = jnp.log(jnp.sqrt(norm2))
+        z_im = jnp.arctan2(b, a)
+        return z_re, z_im

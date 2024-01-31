@@ -261,7 +261,7 @@ class DPIE(MassProfile):
 
     @staticmethod
     @tf.function
-    def _complex_divide(a, b, c, d):
+    def _complex_divide(a, b, c, d):  # TODO: check if builtin complex functions are faster
         """
         z = (a + b * i) / (c + d * i)
         """
