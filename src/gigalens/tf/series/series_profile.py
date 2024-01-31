@@ -74,7 +74,7 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        cond = tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y)
+        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x), tf.math.reduce_all(y == self.y))
 
         def from_cache():
             var = kwargs[self.series_param]
@@ -87,7 +87,7 @@ class MassSeries(MassProfile, ABC):
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        cond = tf.math.reduce_all(x == self.x) and tf.math.reduce_all(y == self.y)
+        cond = tf.math.logical_and(tf.math.reduce_all(x == self.x), tf.math.reduce_all(y == self.y))
 
         def from_cache():
             var = kwargs[self.series_param]

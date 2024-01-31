@@ -81,7 +81,7 @@ class MassSeries(MassProfile, ABC):
 
     def deriv(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        cond = jnp.array_equal(x, self.x) and jnp.array_equal(y, self.y)
+        cond = jnp.logical_and(jnp.array_equal(x, self.x), jnp.array_equal(y, self.y))
 
         def from_cache():
             var = kwargs[self.series_param]
@@ -94,7 +94,7 @@ class MassSeries(MassProfile, ABC):
 
     def hessian(self, x, y, **kwargs):
         scale = kwargs[self.amplitude_param]
-        cond = jnp.array_equal(x, self.x) and jnp.array_equal(y, self.y)
+        cond = jnp.logical_and(jnp.array_equal(x, self.x), jnp.array_equal(y, self.y))
 
         def from_cache():
             var = kwargs[self.series_param]
