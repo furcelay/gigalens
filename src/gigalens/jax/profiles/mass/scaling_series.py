@@ -21,7 +21,7 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
         self.params = self._params = self.profile.params
         self.scaling_constants = [p for p in self.scaling_params if p in self.constants]
 
-    @functools.partial(jit, static_argnums=(0, 1))
+    @functools.partial(jit, static_argnums=(0, 1))  # TODO: check if jit is convenient
     def precompute_deriv(self, order, x, y, **scales):
         scales[self.amplitude_param] = 1.
         out_shape = (*x.shape, self.order + 1)
@@ -39,7 +39,7 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
             f_x += jnp.sum(pre_factor * f_y_chunk, -2, keepdims=True)
         return f_x, f_y
 
-    @functools.partial(jit, static_argnums=(0, 1))
+    @functools.partial(jit, static_argnums=(0, 1))  # TODO: check if jit is convenient
     def precompute_hessian(self, order, x, y, **scales):
         scales[self.amplitude_param] = 1.
         out_shape = (*x.shape, self.order + 1)
