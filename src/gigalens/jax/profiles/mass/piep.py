@@ -53,7 +53,7 @@ class DPIEP(MassProfile):
 
     @functools.partial(jit, static_argnums=(0,))
     def _param_conv(self, e1, e2):
-        phi = jnp.atan2(e2, e1) / 2
+        phi = jnp.arctan2(e2, e1) / 2
         c = jnp.minimum(jnp.sqrt(e1 ** 2 + e2 ** 2), 0.9999)
         q = (1 - c) / (1 + c)
         e = jnp.abs(1 - q ** 2) / (1 + q ** 2)
