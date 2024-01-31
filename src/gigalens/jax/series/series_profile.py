@@ -1,7 +1,7 @@
 import functools
 
 import jax.numpy as jnp
-from jax import jit, tree_util
+from jax import jit
 from jax.scipy.special import factorial
 
 from gigalens.tf.profile import MassProfile
@@ -101,17 +101,3 @@ class MassSeries(MassProfile, ABC):
         fact = factorial(n)
         powers = jnp.power((jnp.expand_dims(var, -1) - self.series_var_0), n)  # batch, (n+1)
         return jnp.sum(coefs * powers / fact, -1)  # x, y, batch | sum along (n+1)
-
-    def _tree_flatten(self):
-        children = ((self.x, self.y), self.constants_dict)  # arrays
-        aux_data = {'order': self.order}  # static values
-        return (children, aux_data)
-
-    @classmethod
-    def _tree_unflatten(cls, aux_data, children):
-        return cls(*children, **aux_data)
-
-
-tree_util.register_pytree_node(MassSeries,
-                               MassSeries._tree_flatten,
-                               MassSeries._tree_unflatten)
