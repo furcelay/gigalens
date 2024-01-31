@@ -119,9 +119,10 @@ class MassSeries(MassProfile, ABC):
     @functools.partial(jit, static_argnums=(0,))
     def _get_hessian(self, **kwargs):
         var = kwargs[self.series_param]
-        f_x = self._evaluate_series(var, self._f_x)
-        f_y = self._evaluate_series(var, self._f_y)
-        return f_x, f_y
+        f_xx = self._evaluate_series(var, self._f_xx)
+        f_xy = self._evaluate_series(var, self._f_xy)
+        f_yy = self._evaluate_series(var, self._f_yy)
+        return f_xx, f_xy, f_yy
 
     @functools.partial(jit, static_argnums=(0,))
     def _compute_deriv(self, x, y, **kwargs):
