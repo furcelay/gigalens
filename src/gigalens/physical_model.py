@@ -40,3 +40,28 @@ class PhysicalModelBase(ABC):
     @property
     def constants(self):
         return self._constants
+
+
+class LensModelBase(ABC):
+
+    def __init__(self, lenses, lenses_constants):
+        self.lenses = lenses
+        self.lenses_constants = lenses_constants
+
+    def alpha(self, x, y, lens_params: Dict[str, Dict]):
+        pass
+
+    def beta(self, x, y, lens_params: Dict[str, Dict], deflection_ratio=1.):
+        pass
+
+    def hessian(self, x, y, lens_params: Dict[str, Dict]):
+        pass
+
+    def magnification(self, x, y, lens_params: Dict[str, Dict], deflection_ratio=1.):
+        pass
+
+    def convergence(self, x, y, lens_params: Dict[str, Dict]):
+        pass
+
+    def shear(self, x, y, lens_params: Dict[str, Dict]):
+        pass
