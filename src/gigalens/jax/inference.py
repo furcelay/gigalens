@@ -31,7 +31,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
     ):
         dev_cnt = jax.device_count()
         n_samples = (n_samples // dev_cnt) * dev_cnt
-        self.prob_model.init_centroids(bs=n_samples // dev_cnt)
         lens_sim = sim.LensSimulator(
             self.phys_model,
             self.sim_config,
@@ -91,7 +90,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         dev_cnt = jax.device_count()
         seeds = jax.random.split(jax.random.PRNGKey(seed), dev_cnt)
         n_vi = (n_vi // dev_cnt) * dev_cnt
-        self.prob_model.init_centroids(bs=n_vi // dev_cnt)
         lens_sim = sim.LensSimulator(
             self.phys_model,
             self.sim_config,
@@ -162,7 +160,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             self.sim_config,
             bs=n_hmc // dev_cnt,
         )
-        self.prob_model.init_centroids(bs=n_hmc // dev_cnt)
         momentum_distribution = tfd.MultivariateNormalFullCovariance(
             loc=jnp.zeros_like(q_z.mean()),
             covariance_matrix=jnp.linalg.inv(q_z.covariance()),
@@ -240,7 +237,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         aux_prob_fn = prob_fns[auxiliar]
 
         lens_sim = sim.LensSimulator(self.phys_model, self.sim_config, bs=n_smc_samples)
-        self.prob_model.init_centroids(n_smc_samples)
 
         @jit
         def log_like_fn(z):

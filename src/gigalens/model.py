@@ -74,8 +74,6 @@ class ProbabilisticModel(ABC):
         self.centroids_y = None
         self.centroids_errors_x = None
         self.centroids_errors_y = None
-        self.centroids_x_batch = None
-        self.centroids_y_batch = None
 
     @abstractmethod
     def log_prob(self, simulator, z):

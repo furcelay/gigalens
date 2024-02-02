@@ -50,8 +50,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self.centroids_y = None
         self.centroids_errors_x = None
         self.centroids_errors_y = None
-        self.centroids_x_batch = None
-        self.centroids_y_batch = None
 
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)
@@ -61,8 +59,8 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
                 self.background_rms = tf.constant(background_rms, dtype=tf.float32)
                 self.exp_time = tf.constant(exp_time, dtype=tf.float32)
         if self.include_positions:
-            self.centroids_x = [tf.convert_to_tensor(cx, dtype=tf.float32) for cx in centroids_x]
-            self.centroids_y = [tf.convert_to_tensor(cy, dtype=tf.float32) for cy in centroids_y]
+            self.centroids_x = [tf.expand_dims(tf.constant(cx, dtype=tf.float32), -1) for cx in centroids_x]
+            self.centroids_y = [tf.expand_dims(tf.constant(cy, dtype=tf.float32), -1) for cy in centroids_y]
             self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
             self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
             self.n_position = 2 * tf.size(tf.concat(self.centroids_x, axis=0), out_type=tf.float32)
@@ -98,11 +96,11 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, params):
         chi2 = 0.
         log_like = 0.
-        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x_batch,
-                                                                        self.centroids_y_batch,
+        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x,
+                                                                        self.centroids_y,
                                                                         params)
-        magnifications = simulator.points_magnification(self.centroids_x_batch,
-                                                        self.centroids_y_batch,
+        magnifications = simulator.points_magnification(self.centroids_x,
+                                                        self.centroids_y,
                                                         params)
         for points, barycentre, cex, cey, mag in zip(beta_points, beta_barycentre,
                                                      self.centroids_errors_x, self.centroids_errors_y,
@@ -180,15 +178,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def log_prior(self, z):
         params = self.bij.forward(z)
         return self.prior.log_prob(params) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
-
-    def init_centroids(self, bs):
-        if self.include_positions:
-            self.centroids_x_batch = [tf.constant(
-                tf.repeat(cx[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
-            ) for cx in self.centroids_x]
-            self.centroids_y_batch = [tf.constant(
-                tf.repeat(cy[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
-            ) for cy in self.centroids_y]
 
 
 class BackwardProbModel(gigalens.model.ProbabilisticModel):  # TODO: update BackwardProbModel

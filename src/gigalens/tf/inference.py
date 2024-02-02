@@ -19,7 +19,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         tf.random.set_seed(seed)
         start = self.prob_model.prior.sample(n_samples) if start is None else start
         trial = tf.Variable(self.prob_model.bij.inverse(start))
-        self.prob_model.init_centroids(bs=n_samples)
         lens_sim = sim.LensSimulator(
             self.phys_model, self.sim_config, bs=n_samples
         )
@@ -52,7 +51,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             self.sim_config,
             bs=n_vi,
         )
-        self.prob_model.init_centroids(bs=n_vi)
 
         start_mean = tf.squeeze(start_mean)
 
@@ -123,7 +121,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             self.sim_config,
             bs=n_hmc,
         )
-        self.prob_model.init_centroids(bs=n_hmc)
 
         mc_start = q_z.sample(n_hmc)
         cov_estimate = q_z.covariance()
@@ -214,7 +211,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         aux_prob_fn = prob_fns[auxiliar]
 
         lens_sim = sim.LensSimulator(self.phys_model, self.sim_config, bs=n_smc_samples)
-        self.prob_model.init_centroids(n_smc_samples)
 
         @tf.function
         def log_like_fn(z):

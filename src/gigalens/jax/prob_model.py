@@ -36,8 +36,8 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
                 self.background_rms = jnp.float32(background_rms)
                 self.exp_time = jnp.float32(exp_time)
         if self.include_positions:
-            self.centroids_x = [jnp.array(cx) for cx in centroids_x]
-            self.centroids_y = [jnp.array(cy) for cy in centroids_y]
+            self.centroids_x = [jnp.expand_dims(jnp.array(cx), -1) for cx in centroids_x]
+            self.centroids_y = [jnp.expand_dims(jnp.array(cy), -1) for cy in centroids_y]
             self.centroids_errors_x = [jnp.array(cex) for cex in centroids_errors_x]
             self.centroids_errors_y = [jnp.array(cey) for cey in centroids_errors_y]
             self.n_position = 2 * jnp.size(jnp.concatenate(self.centroids_x, axis=0))
@@ -78,11 +78,11 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         chi2 = 0.
         log_like = 0.
         # TODO: see if need to batch centroids or add dimension
-        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x_batch,
-                                                                        self.centroids_y_batch,
+        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x,
+                                                                        self.centroids_y,
                                                                         params)
-        magnifications = simulator.points_magnification(self.centroids_x_batch,
-                                                        self.centroids_y_batch,
+        magnifications = simulator.points_magnification(self.centroids_x,
+                                                        self.centroids_y,
                                                         params)
         for points, barycentre, cex, cey, mag in zip(beta_points, beta_barycentre,
                                                      self.centroids_errors_x, self.centroids_errors_y,
@@ -141,13 +141,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def log_prior(self, z):
         x = self.bij.forward(z)
         return self.prior.log_prob(x) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
-
-    def init_centroids(self, bs):
-        if self.include_positions:
-            self.centroids_x_batch = [jnp.array(
-                jnp.repeat(cx[..., jnp.newaxis], bs, axis=-1)) for cx in self.centroids_x]
-            self.centroids_y_batch = [jnp.array(
-                jnp.repeat(cy[..., jnp.newaxis], bs, axis=-1)) for cy in self.centroids_y]
 
 
 class BackwardProbModel(gigalens.model.ProbabilisticModel):  # TODO: update BackwardProbModel
