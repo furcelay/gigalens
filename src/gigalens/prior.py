@@ -124,10 +124,10 @@ class LensPrior:
 
     def get_physical_model(self):
         return self._phys_model_cls(
-            self.lenses.profiles,
-            self.sources.profiles,
-            self.foreground.profiles,
-            self.constants
+            lenses=self.lenses.profiles,
+            source_light=self.sources.profiles,
+            lens_light=self.foreground.profiles,
+            constants=self.constants
         )
 
     def get_prior(self):
