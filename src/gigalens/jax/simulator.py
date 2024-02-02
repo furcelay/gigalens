@@ -10,7 +10,8 @@ from lenstronomy.Util.kernel_util import subgrid_kernel
 from objax.constants import ConvPadding
 from objax.functional import average_pool_2d
 
-import gigalens.model
+import gigalens.prob_model
+import gigalens.physical_model
 import gigalens.simulator
 
 
@@ -19,7 +20,7 @@ import gigalens.simulator
 class LensSimulator(gigalens.simulator.LensSimulatorInterface):
     def __init__(
             self,
-            phys_model: gigalens.model.PhysicalModelBase,
+            phys_model: gigalens.physical_model.PhysicalModelBase,
             sim_config: gigalens.simulator.SimulatorConfig,
             bs: int,
     ):

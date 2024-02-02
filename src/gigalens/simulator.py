@@ -5,7 +5,8 @@ from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 from lenstronomy.Data.pixel_grid import PixelGrid
 
-import gigalens.model
+import gigalens.prob_model
+import gigalens.physical_model
 
 
 @dataclass
@@ -70,7 +71,7 @@ class LensSimulatorInterface(ABC):
     number of pixels, point spread function, etc.).
 
     Attributes:
-        phys_model (:obj:`~gigalens.model.PhysicalModel`): The physical model that generated the lensing system. All
+        phys_model (:obj:`~gigalens.physical_model.PhysicalModel`): The physical model that generated the lensing system. All
             parameters ``z`` that are passed to the simulation methods are expected to correspond to this physical
             model.
         sim_config (:obj:`~gigalens.simulator.SimulatorConfig`): Camera configuration settings
@@ -79,7 +80,7 @@ class LensSimulatorInterface(ABC):
 
     def __init__(
         self,
-        phys_model: gigalens.model.PhysicalModelBase,
+        phys_model: gigalens.physical_model.PhysicalModelBase,
         sim_config: SimulatorConfig,
         bs: int,
     ):

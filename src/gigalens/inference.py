@@ -3,7 +3,8 @@ from typing import Optional, Any, Union
 
 import numpy as np
 
-import gigalens.model
+import gigalens.prob_model
+import gigalens.physical_model
 import gigalens.simulator
 
 
@@ -15,15 +16,15 @@ class ModellingSequenceInterface(ABC):
     3. Hamiltonian Monte Carlo (HMC) using the inverse of the VI covariance matrix as the mass matrix :math:`M`. See :cite:t:`duan1987a, neal2012a`.
 
     Args:
-        phys_model (:obj:`~gigalens.model.PhysicalModel`): The physical model of the lensing system that we want to fit
-        prob_model (:obj:`~gigalens.model.ProbabilisticModel`): The probabilistic model of the data we are fitting
+        phys_model (:obj:`~gigalens.physical_model.PhysicalModel`): The physical model of the lensing system that we want to fit
+        prob_model (:obj:`~gigalens.prob_model.ProbabilisticModel`): The probabilistic model of the data we are fitting
         sim_config (:obj:`~gigalens.simulator.SimulatorConfig`): Parameters for image simulation (e.g., pixel scale)
     """
 
     def __init__(
             self,
-            phys_model: gigalens.model.PhysicalModelBase,
-            prob_model: gigalens.model.ProbabilisticModel,
+            phys_model: gigalens.physical_model.PhysicalModelBase,
+            prob_model: gigalens.prob_model.ProbabilisticModel,
             sim_config: gigalens.simulator.SimulatorConfig,
     ):
         self.phys_model = phys_model

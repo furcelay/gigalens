@@ -1,13 +1,10 @@
+from abc import ABC
 from typing import List, Dict
 
-import tensorflow as tf
-
-import gigalens.prob_model
-import gigalens.physical_model
 import gigalens.profile
 
 
-class PhysicalModel(gigalens.physical_model.PhysicalModelBase):
+class PhysicalModelBase(ABC):
     """A physical model for the lensing system.
 
     Args:
@@ -27,20 +24,19 @@ class PhysicalModel(gigalens.physical_model.PhysicalModelBase):
         lenses: List[gigalens.profile.MassProfile],
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
-        constants: Dict = None,
+        constants: Dict = None
     ):
+        self.lenses = lenses
+        self.lens_light = lens_light
+        self.source_light = source_light
+        if constants is None:
+            constants = {  # TODO: review if change names
+                'lens_mass': {str(i): {} for i in range(len(self.lenses))},
+                'source_light': {str(i): {} for i in range(len(self.source_light))},
+                'lens_light': {str(i): {} for i in range(len(self.lens_light))}
+            }
+        self._constants = constants
 
-        super(PhysicalModel, self).__init__(lenses, lens_light, source_light,
-                                            constants)
-        self._constants = _to_tf_constant(self._constants)
-
-
-def _to_tf_constant(d):
-    """
-    Recursively apply tf.constant(v, dtype=tf.float32) to all leaf values in a structured dictionary.
-    """
-    if isinstance(d, dict):
-        return {k: _to_tf_constant(v) for k, v in d.items()}
-    else:
-        # Apply tf.constant to the leaf value
-        return tf.constant(d, dtype=tf.float32)
+    @property
+    def constants(self):
+        return self._constants

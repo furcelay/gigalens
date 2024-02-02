@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from gigalens.model import PhysicalModel
+from gigalens.prob_model import PhysicalModel
 from gigalens.simulator import SimulatorConfig
 from gigalens.tf.inference import ModellingSequence
 from gigalens.tf.prob_model import ForwardProbModel

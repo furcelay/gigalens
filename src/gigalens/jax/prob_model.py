@@ -8,10 +8,10 @@ from jax.tree_util import tree_flatten
 from tensorflow_probability.substrates.jax import distributions as tfd, bijectors as tfb
 
 import gigalens.jax.simulator as sim
-import gigalens.model
+import gigalens.prob_model
 
 
-class ForwardProbModel(gigalens.model.ProbabilisticModel):
+class ForwardProbModel(gigalens.prob_model.ProbabilisticModel):
     def __init__(
             self,
             prior: tfd.Distribution,
@@ -143,7 +143,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         return self.prior.log_prob(x) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
 
 
-class BackwardProbModel(gigalens.model.ProbabilisticModel):  # TODO: update BackwardProbModel
+class BackwardProbModel(gigalens.prob_model.ProbabilisticModel):  # TODO: update BackwardProbModel
     def __init__(
             self, prior: tfd.Distribution, observed_image, background_rms, exp_time
     ):

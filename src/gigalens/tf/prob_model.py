@@ -2,11 +2,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd, bijectors as tfb
 
-import gigalens.model
+import gigalens.prob_model
 import gigalens.tf.simulator
 
 
-class ForwardProbModel(gigalens.model.ProbabilisticModel):
+class ForwardProbModel(gigalens.prob_model.ProbabilisticModel):
     """
     Probabilistic model defined using the simulated image as an estimator for the noise variance map. Linear parameters
     *are not* automatically solved for using least squares.
@@ -171,7 +171,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         return self.prior.log_prob(params) + self.unconstraining_bij.forward_log_det_jacobian(self.pack_bij.forward(z))
 
 
-class BackwardProbModel(gigalens.model.ProbabilisticModel):  # TODO: update BackwardProbModel
+class BackwardProbModel(gigalens.prob_model.ProbabilisticModel):  # TODO: update BackwardProbModel
     """
     Probabilistic model defined using the observed image as an estimator for the noise variance map. Linear parameters
     *are* automatically solved for using least squares.

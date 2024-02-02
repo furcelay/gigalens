@@ -2,11 +2,12 @@ from typing import List, Dict
 
 from jax import numpy as jnp
 
-import gigalens.model
+import gigalens.prob_model
+import gigalens.physical_model
 import gigalens.profile
 
 
-class PhysicalModel(gigalens.model.PhysicalModelBase):
+class PhysicalModel(gigalens.physical_model.PhysicalModelBase):
     """A physical model for the lensing system.
 
     Args:

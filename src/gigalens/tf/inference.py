@@ -10,7 +10,7 @@ from tqdm.auto import trange, tqdm
 import time
 
 import gigalens.inference
-import gigalens.model
+import gigalens.prob_model
 import gigalens.tf.simulator as sim
 
 

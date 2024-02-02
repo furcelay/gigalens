@@ -15,7 +15,7 @@ from tqdm.auto import trange
 
 import gigalens.inference
 import gigalens.jax.simulator as sim
-import gigalens.model
+import gigalens.prob_model
 
 
 # TODO: init centroids
