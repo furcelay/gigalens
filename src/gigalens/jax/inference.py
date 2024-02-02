@@ -207,5 +207,118 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         print(f"Sampling took {(end - start):.1f}s")
         return ret
 
-    def SMC(self):
-        pass
+    def SMC(self,
+            start=None,
+            num_particles=1000,
+            num_ensembles=1,
+            num_leapfrog_steps=10,
+            post_sampling_steps=100,
+            ess_threshold_ratio=0.5,
+            max_sampling_per_stage=8,
+            target='pixels',
+            auxiliar='positions',
+            seed=1):
+
+        n_smc_samples = num_particles * num_ensembles
+
+        key = jax.random.PRNGKey(seed)
+        key, subkey = jax.random.split(key)
+
+        if start is None:
+            start = self.prob_model.prior.sample((num_particles, num_ensembles), seed=key)
+            start = self.prob_model.bij.inverse(start)
+        else:
+            start = jax.random.choice(key, start, (num_particles, num_ensembles), replace=False)
+        n_dim = start.shape[-1]
+
+        prob_fns = {
+            'pixels': self.prob_model.stats_pixels,
+            'positions': self.prob_model.stats_positions,
+            'none': lambda x: jnp.zeros_like(x[:-1])
+        }
+        target_prob_fn = prob_fns[target]
+        aux_prob_fn = prob_fns[auxiliar]
+
+        lens_sim = sim.LensSimulator(self.phys_model, self.sim_config, bs=n_smc_samples)
+        self.prob_model.init_centroids(n_smc_samples)
+
+        @jit
+        def log_like_fn(z):
+            z = jnp.reshape(z, (n_smc_samples, -1))
+            x = self.prob_model.bij.forward(z)
+            ll = target_prob_fn(lens_sim, x)[0]
+            return jnp.reshape(ll, (num_particles, num_ensembles))
+
+        @jit
+        def log_aux_fn(z):
+            z = jnp.reshape(z, (n_smc_samples, -1))
+            x = self.prob_model.bij.forward(z)
+            la = aux_prob_fn(lens_sim, x)[0]
+            return jnp.reshape(la, (num_particles, num_ensembles))
+
+        @jit
+        def log_prob_fn(z):
+            ll = log_like_fn(z)
+            lp = self.prob_model.log_prior(z)
+            return ll + lp
+
+        def sample_smc(start_z):
+            make_kernel_fn = tfe.mcmc.gen_make_hmc_kernel_fn(num_leapfrog_steps=num_leapfrog_steps)
+
+            _, samples_, final_kernel_results = tfe.mcmc.sample_sequential_monte_carlo(
+                prior_log_prob_fn=self.prob_model.log_prior,
+                likelihood_log_prob_fn=log_like_fn,
+                current_state=start_z,
+                min_num_steps=1,
+                max_num_steps=8,
+                max_stage=100,
+                make_kernel_fn=make_kernel_fn,
+                tuning_fn=lambda ns, ls, la: tfe.mcmc.simple_heuristic_tuning(ns, ls, la, optimal_accept=0.651),
+                make_tempered_target_log_prob_fn=make_tempered_target_log_prob_fn_with_auxiliar(log_aux_fn),
+                resample_fn=tfe.mcmc.resample_systematic,
+                ess_threshold_ratio=0.8,
+                seed=subkey,
+                name="SMC"
+            )
+            scalings = jnp.exp(final_kernel_results.particle_info.log_scalings)
+
+            kernel = make_kernel_fn(
+                log_prob_fn,
+                [jnp.reshape(samples_, (-1, n_dim))],
+                jnp.reshape(scalings, (-1,)))
+
+            return samples_, kernel
+
+        t = time.time()
+        print("starting SMC")
+        samples, kernel = sample_smc(start)
+        t_sample = time.time() - t
+        print(f'SMC completed, time: {t_sample / 60:.1f} min')
+        if post_sampling_steps > 0:
+            _, sub_subkey = jax.random.split(subkey)
+            t = time.time()
+            print("starting HMC sampling")
+            samples = tfp.mcmc.sample_chain(
+                num_results=post_sampling_steps,
+                num_burnin_steps=0,
+                current_state=jnp.reshape(samples, (-1, n_dim)),
+                kernel=kernel,
+                trace_fn=None,
+                seed=sub_subkey,
+            )
+            t_sample = time.time() - t
+            print(f'SMC completed, time: {t_sample / 60:.1f} min')
+        return samples
+
+
+def make_tempered_target_log_prob_fn_with_auxiliar(log_auxiliar_fn):
+    def make_tempered_target_log_prob_fn(
+            prior_log_prob_fn, likelihood_log_prob_fn, inverse_temperatures, log_auxiliar_prob_fn=log_auxiliar_fn):
+        """Helper which creates inner kernel target_log_prob_fn."""
+        def _tempered_target_log_prob(*args):
+            priorlogprob = prior_log_prob_fn(*args)
+            loglike = likelihood_log_prob_fn(*args)
+            logaux = log_auxiliar_prob_fn(*args)
+            return priorlogprob + logaux + (loglike - logaux) * inverse_temperatures
+        return _tempered_target_log_prob
+    return make_tempered_target_log_prob_fn
