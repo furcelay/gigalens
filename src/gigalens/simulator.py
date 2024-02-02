@@ -93,7 +93,7 @@ class LensSimulatorInterface(ABC):
     @abstractmethod
     def simulate(
         self,
-        params: Dict[str, List[Dict]],
+        params: Dict[str, Dict[str, Dict]],
     ):
         """Simulates lenses with physical parameters ``params``.
 
@@ -109,7 +109,7 @@ class LensSimulatorInterface(ABC):
     @abstractmethod
     def lstsq_simulate(
         self,
-        params: Dict[str, List[Dict]],
+        params: Dict[str, Dict[str, Dict]],
         observed_image,
         err_map,
     ):
