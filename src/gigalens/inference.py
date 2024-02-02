@@ -138,3 +138,7 @@ class ModellingSequenceInterface(ABC):
             Posterior chains in *unconstrained* space
         """
         pass
+
+
+class InferenceResults(ABC):
+    pass
