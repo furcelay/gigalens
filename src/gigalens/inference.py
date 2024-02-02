@@ -107,3 +107,33 @@ class ModellingSequenceInterface(ABC):
             Posterior chains in *unconstrained* space
         """
         pass
+
+    @abstractmethod
+    def SMC(self,
+            num_particles=1000,
+            num_ensembles=1,
+            num_leapfrog_steps=10,
+            post_sampling_steps=100,
+            ess_threshold_ratio=0.5,
+            max_sampling_per_stage=8,
+            likelihood='pixels',
+            auxiliar='positions',
+            seed=1):
+        pass
+        """Runs Hamiltonian Monte Carlo (HMC) to draw posterior samples. See Section 2.5 in `our paper <https://arxiv.org/abs/2202.07663>`__.
+
+        Args:
+            q_z: Fitted posterior from SVI. Used to calculate the mass matrix :math:`M` for preconditioned HMC.
+                Convention is that ``q_z`` is an approximation of the *unconstrained* posterior.
+            init_eps (float): Initial step size :math:`\epsilon`
+            init_l (int): Initial number of leapfrog steps :math:`L`
+            n_hmc (int): Number of HMC chains to run in parallel
+            num_burnin_steps (int): Number of burn-in steps
+            num_results (int): Number of samples to draw from each chain (after burning in)
+            max_leapfrog_steps (int): Maximum number of leapfrog steps if :math:`L` is tuned automatically
+            seed: A random seed
+
+        Returns:
+            Posterior chains in *unconstrained* space
+        """
+        pass
