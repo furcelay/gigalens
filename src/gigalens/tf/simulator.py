@@ -82,7 +82,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return f_x, f_y
 
     @tf.function
-    def beta(self, x, y, lens_params: List[Dict], deflection_ratio=1.):
+    def beta(self, x, y, lens_params: Dict[str, Dict], deflection_ratio=1.):
         f_x, f_y = self.alpha(x, y, lens_params)
         beta_x, beta_y = x - deflection_ratio * f_x, y - deflection_ratio * f_y
         return beta_x, beta_y
@@ -123,7 +123,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         return f_xx, f_xy, f_yx, f_yy
 
     @tf.function
-    def magnification(self, x, y, lens_params: List[Dict], deflection_ratio=1.):
+    def magnification(self, x, y, lens_params: Dict[str, Dict], deflection_ratio=1.):
         f_xx, f_xy, f_yx, f_yy = self.hessian(x, y, lens_params)
         f_xx *= deflection_ratio
         f_xy *= deflection_ratio
