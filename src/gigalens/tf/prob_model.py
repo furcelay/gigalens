@@ -42,15 +42,6 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     ):
         super(ForwardProbModel, self).__init__(prior, include_pixels, include_positions)
 
-        self.observed_image = None
-        self.error_map = None
-        self.background_rms = None
-        self.exp_time = None
-        self.centroids_x = None
-        self.centroids_y = None
-        self.centroids_errors_x = None
-        self.centroids_errors_y = None
-
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)
             if error_map is not None:

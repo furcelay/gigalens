@@ -74,6 +74,10 @@ class ProbabilisticModel(ABC):
         self.centroids_y = None
         self.centroids_errors_x = None
         self.centroids_errors_y = None
+        self.n_position = None
+        self.bij = None
+        self.pack_bij = None
+        self.unconstraining_bij = None
 
     @abstractmethod
     def log_prob(self, simulator, z):
@@ -85,3 +89,21 @@ class ProbabilisticModel(ABC):
              z: Unconstrained parameters
         """
         pass
+
+    @abstractmethod
+    def log_like(self, simulator, z):
+        pass
+
+    @abstractmethod
+    def log_prior(self, z):
+        pass
+
+    @abstractmethod
+    def stats_pixels(self, simulator, x):
+        pass
+
+    @abstractmethod
+    def stats_positions(self, simulator, x):
+        pass
+
+
