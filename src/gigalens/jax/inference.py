@@ -228,33 +228,34 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             start = jax.random.choice(key, start, (num_particles, num_ensembles), replace=False)
         n_dim = start.shape[-1]
 
+        lens_sim = sim.LensSimulator(self.phys_model, self.sim_config, bs=n_smc_samples)
+
         prob_fns = {
-            'pixels': self.prob_model.stats_pixels,
-            'positions': self.prob_model.stats_positions,
-            'none': lambda x: jnp.zeros_like(x[:-1])
+            'pixels': lambda x: self.prob_model.stats_pixels(lens_sim, x)[0],
+            'positions': lambda x: self.prob_model.stats_positions(lens_sim, x)[0],
+            'none': lambda x: jnp.zeros(n_smc_samples)
         }
         target_prob_fn = prob_fns[target]
         aux_prob_fn = prob_fns[auxiliar]
-
-        lens_sim = sim.LensSimulator(self.phys_model, self.sim_config, bs=n_smc_samples)
 
         @jit
         def log_like_fn(z):
             z = jnp.reshape(z, (n_smc_samples, -1))
             x = self.prob_model.bij.forward(z)
-            ll = target_prob_fn(lens_sim, x)[0]
+            ll = target_prob_fn(x)
             return jnp.reshape(ll, (num_particles, num_ensembles))
 
         @jit
         def log_aux_fn(z):
             z = jnp.reshape(z, (n_smc_samples, -1))
             x = self.prob_model.bij.forward(z)
-            la = aux_prob_fn(lens_sim, x)[0]
+            la = aux_prob_fn(x)
             return jnp.reshape(la, (num_particles, num_ensembles))
 
         @jit
         def log_prob_fn(z):
-            ll = log_like_fn(z)
+            x = self.prob_model.bij.forward(z)
+            ll = target_prob_fn(x)
             lp = self.prob_model.log_prior(z)
             return ll + lp
 

@@ -110,6 +110,7 @@ class ModellingSequenceInterface(ABC):
 
     @abstractmethod
     def SMC(self,
+            start=None,
             num_particles=1000,
             num_ensembles=1,
             num_leapfrog_steps=10,
@@ -136,4 +137,7 @@ class ModellingSequenceInterface(ABC):
         Returns:
             Posterior chains in *unconstrained* space
         """
+        pass
+
+    def corner(self, samples, labels):
         pass
