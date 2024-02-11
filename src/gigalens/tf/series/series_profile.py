@@ -59,17 +59,17 @@ class MassSeries(MassProfile, ABC):
         self._x, self._y = x, y
 
     def set_deriv(self):
-        self._f_x, self._f_y = self.precompute_deriv(self.order, self.x, self.y, **self.constants_dict)
+        self._f_x, self._f_y = self.precompute_deriv(self.x, self.y, **self.constants_dict)
 
     def set_hessian(self):
-        self._f_xx, self._f_xy, self._f_yy = self.precompute_hessian(self.order, self.x, self.y, **self.constants_dict)
+        self._f_xx, self._f_xy, self._f_yy = self.precompute_hessian(self.x, self.y, **self.constants_dict)
 
     @abstractmethod
-    def precompute_deriv(self, order, x, y, **kwargs):
+    def precompute_deriv(self, x, y, **kwargs):
         pass
 
     @abstractmethod
-    def precompute_hessian(self, order, x, y, **kwargs):
+    def precompute_hessian(self, x, y, **kwargs):
         pass
 
     def deriv(self, x, y, **kwargs):  # TODO: raise error if x, y are different to self.x or self.y

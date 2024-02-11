@@ -16,12 +16,12 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
         self.params = self._params = self.profile.params
         self.scaling_constants = [p for p in self.scaling_params if p in self.constants]
 
-    def precompute_deriv(self, order, x, y, **scales):
+    def precompute_deriv(self, x, y, **scales):
         scales[self.amplitude_param] = 1.
-        out_shape = tf.concat([x.shape, [order + 1]], 0)
+        out_shape = tf.concat([x.shape, [self.order + 1]], 0)
         f_x, f_y = tf.zeros(out_shape), tf.zeros(out_shape)
         scaled = self.scale_params(scales)
-        n = tf.range(order + 1, dtype=tf.float32)
+        n = tf.range(self.order + 1, dtype=tf.float32)
         for s_chunk, u_chunk, c_chunk in zip(scaled, self._unscaled_params, self._galaxy_constants):
             amplitude_factor = tf.expand_dims(u_chunk[self.amplitude_param], 0)
             amplitude_factor = tf.expand_dims(amplitude_factor, -1)  # 1, chunk, 1
@@ -29,17 +29,17 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
             series_factor = tf.expand_dims(series_factor, -1)
             series_factor = tf.pow(series_factor, n)  # 1, chunk, n + 1
             pre_factor = amplitude_factor * series_factor
-            f_x_chunk, f_y_chunk = self.profile.precompute_deriv(order, x, y, **s_chunk, **c_chunk)
+            f_x_chunk, f_y_chunk = self.profile.precompute_deriv(x, y, **s_chunk, **c_chunk)
             f_x += tf.reduce_sum(pre_factor * f_x_chunk, -2, keepdims=True)
             f_y += tf.reduce_sum(pre_factor * f_y_chunk, -2, keepdims=True)
         return f_x, f_y
 
-    def precompute_hessian(self, order, x, y, **scales):
+    def precompute_hessian(self, x, y, **scales):
         scales[self.amplitude_param] = 1.
-        out_shape = tf.concat([x.shape, [order + 1]], 0)
+        out_shape = tf.concat([x.shape, [self.order + 1]], 0)
         f_xx, f_xy, f_yy = tf.zeros(out_shape), tf.zeros(out_shape), tf.zeros(out_shape)
         scaled = self.scale_params(scales)
-        n = tf.range(order + 1, dtype=tf.float32)
+        n = tf.range(self.order + 1, dtype=tf.float32)
         for s_chunk, u_chunk, c_chunk in zip(scaled, self._unscaled_params, self._galaxy_constants):
             amplitude_factor = tf.expand_dims(u_chunk[self.amplitude_param], 0)
             amplitude_factor = tf.expand_dims(amplitude_factor, -1)  # 1, chunk, 1
@@ -47,7 +47,7 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
             series_factor = tf.expand_dims(series_factor, -1)
             series_factor = tf.pow(series_factor, n)  # 1, chunk, n + 1
             pre_factor = amplitude_factor * series_factor
-            f_xx_chunk, f_xy_chunk, f_yy_chunk = self.profile.precompute_hessian(order, x, y, **s_chunk, **c_chunk)
+            f_xx_chunk, f_xy_chunk, f_yy_chunk = self.profile.precompute_hessian(x, y, **s_chunk, **c_chunk)
             f_xx += tf.reduce_sum(pre_factor * f_xx_chunk, -2, keepdims=True)
             f_xy += tf.reduce_sum(pre_factor * f_xy_chunk, -2, keepdims=True)
             f_yy += tf.reduce_sum(pre_factor * f_yy_chunk, -2, keepdims=True)
