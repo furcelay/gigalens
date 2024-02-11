@@ -10,7 +10,6 @@ from lenstronomy.Util.kernel_util import subgrid_kernel
 from objax.constants import ConvPadding
 from objax.functional import average_pool_2d
 
-import gigalens.prob_model
 import gigalens.physical_model
 import gigalens.simulator
 

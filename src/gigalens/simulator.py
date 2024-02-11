@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional
 
 import numpy as np
 from lenstronomy.Data.pixel_grid import PixelGrid
 
-import gigalens.prob_model
 import gigalens.physical_model
 
 

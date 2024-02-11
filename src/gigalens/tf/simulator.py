@@ -1,10 +1,9 @@
-from typing import List, Dict
+from typing import Dict
 
 import numpy as np
 import tensorflow as tf
 from lenstronomy.Util.kernel_util import subgrid_kernel
 
-import gigalens.prob_model
 import gigalens.physical_model
 import gigalens.simulator
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class PointSolver(ABC):
+class PointSolverBase(ABC):
 
     def __init__(self, phys_model, positions_structure):
         self.phys_model = phys_model
