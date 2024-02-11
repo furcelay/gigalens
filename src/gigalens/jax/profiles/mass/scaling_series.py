@@ -36,7 +36,8 @@ class ScalingRelationSeries(MassSeries, ScalingRelation):
             series_factor = jnp.power(series_factor, n)  # 1, chunk, n + 1
             pre_factor = amplitude_factor * series_factor
             f_x_chunk, f_y_chunk = self.profile.precompute_deriv(x, y, **s_chunk, **c_chunk)
-            f_x += jnp.sum(pre_factor * f_y_chunk, -2, keepdims=True)
+            f_x += jnp.sum(pre_factor * f_x_chunk, -2, keepdims=True)
+            f_y += jnp.sum(pre_factor * f_y_chunk, -2, keepdims=True)
         return f_x, f_y
 
     # @functools.partial(jit, static_argnums=(0, 1))  # TODO: check if jit is convenient
