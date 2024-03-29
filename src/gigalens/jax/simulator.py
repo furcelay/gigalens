@@ -107,12 +107,13 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                                  x,
                                  y,
                                  params):
+        source_mass_1 = self.phys_model.shared_mass_light(params['source_mass_1'], params['source_light_1'])
         deflection_ratio = params.get('deflection_ratio', self.phys_model.deflection_ratio_constants)
         beta_points = []
         beta_barycentre = []
         for x_i, y_i, sp in zip(x, y):
             beta_points_i = jnp.stack(self.beta_2(x_i, y_i,
-                                                  params['lens_mass'], params['source_mass_1'],
+                                                  params['lens_mass'], source_mass_1,
                                                   deflection_ratio), axis=0)
             beta_points_i = jnp.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
             beta_barycentre_i = jnp.mean(beta_points_i, axis=2, keepdims=True)
@@ -165,12 +166,12 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                                x,
                                y,
                                params):
-
+        source_mass_1 = self.phys_model.shared_mass_light(params['source_mass_1'], params['source_light_1'])
         deflection_ratio = params.get('deflection_ratio', self.phys_model.deflection_ratio_constants)
         magnifications = []
         for x_i, y_i, sp in zip(x, y):
             magnifications.append(self.magnification_2(x_i, y_i,
-                                                       params['lens_mass'], params['source_mass_1'],
+                                                       params['lens_mass'], source_mass_1,
                                                        deflection_ratio))
         return magnifications
 
@@ -216,6 +217,8 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             deflection_ratio = params['deflection_ratio']
         else:
             deflection_ratio = self.phys_model.deflection_ratio_constants
+
+        source_mass_1_params = self.phys_model.shared_mass_light(source_mass_1_params, source_light_1_params)
 
         img = jnp.zeros((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
 

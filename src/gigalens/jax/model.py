@@ -241,11 +241,13 @@ class PhysicalModel(gigalens.model.PhysicalModelBase):
             source_mass_1_constants: List[Dict] = None,
             source_light_2_constants: List[Dict] = None,
             deflection_ratio_constants: int = None,
+            share_source_1_mass_light: bool = False,
     ):
         super(PhysicalModel, self).__init__(lenses, lens_light, source_light_1, source_mass_1, source_light_2,
                                             lenses_constants, lens_light_constants,
                                             source_light_1_constants, source_mass_1_constants, source_light_2_constants,
-                                            deflection_ratio_constants)
+                                            deflection_ratio_constants,
+                                            share_source_1_mass_light)
         self.lenses_constants = [{k: jnp.array(v) for k, v in d.items()}
                                  for d in self.lenses_constants]
         self.lens_light_constants = [{k: jnp.array(v) for k, v in d.items()}
@@ -256,4 +258,4 @@ class PhysicalModel(gigalens.model.PhysicalModelBase):
                                         for d in self.source_mass_1_constants]
         self.source_light_2_constants = [{k: jnp.array(v) for k, v in d.items()}
                                          for d in self.source_light_2_constants]
-        # self.deflection_ratio_constants = self.deflection_ratio_constants
+

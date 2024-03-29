@@ -34,6 +34,7 @@ class PhysicalModelBase(ABC):
         source_mass_1_constants: List[Dict] = None,
         source_light_2_constants: List[Dict] = None,
         deflection_ratio_constants: int = None,
+        share_source_1_mass_light: bool = False,
     ):
         self.lenses = lenses
         self.lens_light = lens_light
@@ -56,6 +57,16 @@ class PhysicalModelBase(ABC):
         self.source_mass_1_constants = source_mass_1_constants
         self.source_light_2_constants = source_light_2_constants
         self.deflection_ratio_constants = deflection_ratio_constants
+        self.share_source_1_mass_light = share_source_1_mass_light
+
+    def shared_mass_light(self, source_mass_1, source_light_1):
+        if self.share_source_1_mass_light:
+            joined = []
+            for mass, light, mass_profile in zip(source_mass_1, source_light_1, self.source_mass_1):
+                joined.append({**mass, **{k: v for k, v in light.items() if k in mass_profile.params}})
+            return joined
+        else:
+            return source_mass_1
 
 
 class ProbabilisticModel(ABC):
