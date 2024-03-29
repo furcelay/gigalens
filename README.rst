@@ -1,4 +1,4 @@
-GIGA-Lens-Clusters
+GIGA-Lens-Clusters: Dual Source Plane (DSP)
 ========================
 
 .. image:: https://img.shields.io/pypi/v/gigalens.svg
@@ -6,7 +6,8 @@ GIGA-Lens-Clusters
     :alt: Latest PyPI version
 
 This is an alternative branch of Giga-Lens intended for group and cluster lens modeling, this stills under intense
-development.
+development. This version is intended only for DSP systems where the first source is also a lens.
+See Collett & Auger 2014 for more details.
 
 Gradient Informed, GPU Accelerated Lens modelling (GIGA-Lens) is a package for fast Bayesian inference on strong
 gravitational lenses. For details, please see `our paper <https://arxiv.org/abs/2202.07663>`__. See

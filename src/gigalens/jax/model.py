@@ -22,10 +22,14 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             background_rms=None,
             exp_time=None,
             error_map=None,
-            centroids_x=None,
-            centroids_y=None,
-            centroids_errors_x=None,
-            centroids_errors_y=None,
+            centroids_x_1=None,
+            centroids_y_1=None,
+            centroids_x_2=None,
+            centroids_y_2=None,
+            centroids_errors_x_1=None,
+            centroids_errors_y_1=None,
+            centroids_errors_x_2=None,
+            centroids_errors_y_2=None,
             include_pixels=True,
             include_positions=True,
     ):
@@ -37,12 +41,16 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self.error_map = None
         self.background_rms = None
         self.exp_time = None
-        self.centroids_x = None
-        self.centroids_y = None
+        self.centroids_x_1 = None
+        self.centroids_y_1 = None
+        self.centroids_x_2 = None
+        self.centroids_y_2 = None
         self.centroids_errors_x = None
         self.centroids_errors_y = None
-        self.centroids_x_batch = None
-        self.centroids_y_batch = None
+        self.centroids_x_batch_1 = None
+        self.centroids_y_batch_1 = None
+        self.centroids_x_batch_2 = None
+        self.centroids_y_batch_2 = None
 
         if self.include_pixels:
             self.observed_image = jnp.array(observed_image)
@@ -52,11 +60,16 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
                 self.background_rms = jnp.float32(background_rms)
                 self.exp_time = jnp.float32(exp_time)
         if self.include_positions:
-            self.centroids_x = [jnp.array(cx) for cx in centroids_x]
-            self.centroids_y = [jnp.array(cy) for cy in centroids_y]
-            self.centroids_errors_x = [jnp.array(cex) for cex in centroids_errors_x]
-            self.centroids_errors_y = [jnp.array(cey) for cey in centroids_errors_y]
-            self.n_position = 2 * jnp.size(jnp.concatenate(self.centroids_x, axis=0))
+            self.centroids_x_1 = [jnp.array(cx) for cx in centroids_x_1]
+            self.centroids_y_1 = [jnp.array(cy) for cy in centroids_y_1]
+            self.centroids_x_2 = [jnp.array(cx) for cx in centroids_x_2]
+            self.centroids_y_2 = [jnp.array(cy) for cy in centroids_y_2]
+            self.centroids_errors_x_1 = ([jnp.array(cex) for cex in centroids_errors_x_1] +
+                                         [jnp.array(cex) for cex in centroids_errors_x_2])
+            self.centroids_errors_y_1 = ([jnp.array(cey) for cey in centroids_errors_y_1] +
+                                         [jnp.array(cey) for cey in centroids_errors_y_2])
+            self.n_position = 2 * (jnp.size(jnp.concatenate(self.centroids_x_1, axis=0)) +
+                                   jnp.size(jnp.concatenate(self.centroids_x_2, axis=0)))
 
         example = prior.sample(seed=random.PRNGKey(0))
         size = int(jnp.size(tree_flatten(example)[0]))
@@ -94,12 +107,21 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         chi2 = 0.
         log_like = 0.
         # TODO: see if need to batch centroids or add dimension
-        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x_batch,
-                                                                        self.centroids_y_batch,
-                                                                        params)
-        magnifications = simulator.points_magnification(self.centroids_x_batch,
-                                                        self.centroids_y_batch,
-                                                        params)
+        beta_points_1, beta_barycentre_1 = simulator.points_beta_barycentre_1(self.centroids_x_batch_1,
+                                                                              self.centroids_y_batch_1,
+                                                                              params)
+        magnifications_1 = simulator.points_magnification_1(self.centroids_x_batch_1,
+                                                            self.centroids_y_batch_1,
+                                                            params)
+        beta_points_2, beta_barycentre_2 = simulator.points_beta_barycentre_2(self.centroids_x_batch_2,
+                                                                              self.centroids_y_batch_2,
+                                                                              params)
+        magnifications_2 = simulator.points_magnification_2(self.centroids_x_batch_2,
+                                                            self.centroids_y_batch_2,
+                                                            params)
+        beta_points = beta_points_1 + beta_points_2
+        beta_barycentre = beta_barycentre_1 + beta_barycentre_2
+        magnifications = magnifications_1 + magnifications_2
         for points, barycentre, cex, cey, mag in zip(beta_points, beta_barycentre,
                                                      self.centroids_errors_x, self.centroids_errors_y,
                                                      magnifications):
@@ -109,7 +131,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             mag = jnp.transpose(mag, (1, 0))  # batch size, images
 
             err_map = jnp.stack([cex / mag, cey / mag],
-                               axis=1)  # batch size, xy, images
+                                axis=1)  # batch size, xy, images
             chi2_i = jnp.sum(((points - barycentre) / err_map) ** 2, axis=(-2, -1))
             normalization_i = jnp.sum(jnp.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
             log_like += -1/2 * (chi2_i + normalization_i)
@@ -160,10 +182,14 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     def init_centroids(self, bs):
         if self.include_positions:
-            self.centroids_x_batch = [jnp.array(
-                jnp.repeat(cx[..., jnp.newaxis], bs, axis=-1)) for cx in self.centroids_x]
-            self.centroids_y_batch = [jnp.array(
-                jnp.repeat(cy[..., jnp.newaxis], bs, axis=-1)) for cy in self.centroids_y]
+            self.centroids_x_batch_1 = [jnp.array(
+                jnp.repeat(cx[..., jnp.newaxis], bs, axis=-1)) for cx in self.centroids_x_1]
+            self.centroids_y_batch_1 = [jnp.array(
+                jnp.repeat(cy[..., jnp.newaxis], bs, axis=-1)) for cy in self.centroids_y_1]
+            self.centroids_x_batch_2 = [jnp.array(
+                jnp.repeat(cx[..., jnp.newaxis], bs, axis=-1)) for cx in self.centroids_x_2]
+            self.centroids_y_batch_2 = [jnp.array(
+                jnp.repeat(cy[..., jnp.newaxis], bs, axis=-1)) for cy in self.centroids_y_2]
 
 
 class BackwardProbModel(gigalens.model.ProbabilisticModel):
@@ -201,37 +227,33 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
 
 
 class PhysicalModel(gigalens.model.PhysicalModelBase):
-    """A physical model for the lensing system.
-
-    Args:
-        lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
-        lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
-        source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
-
-    Attributes:
-        lenses (:obj:`list` of :obj:`~gigalens.profile.MassProfile`): A list of mass profiles used to model the deflection
-        lens_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the lens light
-        source_light (:obj:`list` of :obj:`~gigalens.profile.LightProfile`): A list of light profiles used to model the source light
-    """
 
     def __init__(
         self,
-        lenses: List[gigalens.profile.MassProfile],
-        lens_light: List[gigalens.profile.LightProfile],
-        source_light: List[gigalens.profile.LightProfile],
-        lenses_constants: List[Dict] = None,
-        lens_light_constants: List[Dict] = None,
-        source_light_constants: List[Dict] = None,
-        distance_constants: List[Dict] = None,
+            lenses: List[gigalens.profile.MassProfile],
+            lens_light: List[gigalens.profile.LightProfile],
+            source_light_1: List[gigalens.profile.LightProfile],
+            source_mass_1: List[gigalens.profile.MassProfile],
+            source_light_2: List[gigalens.profile.LightProfile],
+            lenses_constants: List[Dict] = None,
+            lens_light_constants: List[Dict] = None,
+            source_light_1_constants: List[Dict] = None,
+            source_mass_1_constants: List[Dict] = None,
+            source_light_2_constants: List[Dict] = None,
+            deflection_ratio_constants: int = None,
     ):
-        super(PhysicalModel, self).__init__(lenses, lens_light, source_light,
-                                            lenses_constants, lens_light_constants, source_light_constants,
-                                            distance_constants)
+        super(PhysicalModel, self).__init__(lenses, lens_light, source_light_1, source_mass_1, source_light_2,
+                                            lenses_constants, lens_light_constants,
+                                            source_light_1_constants, source_mass_1_constants, source_light_2_constants,
+                                            deflection_ratio_constants)
         self.lenses_constants = [{k: jnp.array(v) for k, v in d.items()}
                                  for d in self.lenses_constants]
         self.lens_light_constants = [{k: jnp.array(v) for k, v in d.items()}
                                      for d in self.lens_light_constants]
-        self.source_light_constants = [{k: jnp.array(v) for k, v in d.items()}
-                                       for d in self.source_light_constants]
-        self.distance_constants = [{k: jnp.array(v) for k, v in d.items()}
-                                   for d in self.distance_constants]
+        self.source_light_1_constants = [{k: jnp.array(v) for k, v in d.items()}
+                                         for d in self.source_light_1_constants]
+        self.source_mass_1_constants = [{k: jnp.array(v) for k, v in d.items()}
+                                        for d in self.source_mass_1_constants]
+        self.source_light_2_constants = [{k: jnp.array(v) for k, v in d.items()}
+                                         for d in self.source_light_2_constants]
+        # self.deflection_ratio_constants = self.deflection_ratio_constants

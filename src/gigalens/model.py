@@ -25,27 +25,37 @@ class PhysicalModelBase(ABC):
         self,
         lenses: List[gigalens.profile.MassProfile],
         lens_light: List[gigalens.profile.LightProfile],
-        source_light: List[gigalens.profile.LightProfile],
+        source_light_1: List[gigalens.profile.LightProfile],
+        source_mass_1: List[gigalens.profile.MassProfile],
+        source_light_2: List[gigalens.profile.LightProfile],
         lenses_constants: List[Dict] = None,
         lens_light_constants: List[Dict] = None,
-        source_light_constants: List[Dict] = None,
-        distance_constants: List[Dict] = None,
+        source_light_1_constants: List[Dict] = None,
+        source_mass_1_constants: List[Dict] = None,
+        source_light_2_constants: List[Dict] = None,
+        deflection_ratio_constants: int = None,
     ):
         self.lenses = lenses
         self.lens_light = lens_light
-        self.source_light = source_light
+        self.source_light_1 = source_light_1
+        self.source_mass_1 = source_mass_1
+        self.source_light_2 = source_light_2
         if lenses_constants is None:
             lenses_constants = [dict() for _ in range(len(lenses))]
         if lens_light_constants is None:
             lens_light_constants = [dict() for _ in range(len(lens_light))]
-        if source_light_constants is None:
-            source_light_constants = [dict() for _ in range(len(source_light))]
-        if distance_constants is None:
-            distance_constants = [dict() for _ in range(len(source_light))]
+        if source_light_1_constants is None:
+            source_light_1_constants = [dict() for _ in range(len(source_light_1))]
+        if source_mass_1_constants is None:
+            source_mass_1_constants = [dict() for _ in range(len(source_mass_1))]
+        if source_light_2_constants is None:
+            source_light_2_constants = [dict() for _ in range(len(source_light_2))]
         self.lenses_constants = lenses_constants
         self.lens_light_constants = lens_light_constants
-        self.source_light_constants = source_light_constants
-        self.distance_constants = distance_constants
+        self.source_light_1_constants = source_light_1_constants
+        self.source_mass_1_constants = source_mass_1_constants
+        self.source_light_2_constants = source_light_2_constants
+        self.deflection_ratio_constants = deflection_ratio_constants
 
 
 class ProbabilisticModel(ABC):
