@@ -64,10 +64,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self.centroids_y_1 = [jnp.array(cy) for cy in centroids_y_1]
             self.centroids_x_2 = [jnp.array(cx) for cx in centroids_x_2]
             self.centroids_y_2 = [jnp.array(cy) for cy in centroids_y_2]
-            self.centroids_errors_x_1 = ([jnp.array(cex) for cex in centroids_errors_x_1] +
-                                         [jnp.array(cex) for cex in centroids_errors_x_2])
-            self.centroids_errors_y_1 = ([jnp.array(cey) for cey in centroids_errors_y_1] +
-                                         [jnp.array(cey) for cey in centroids_errors_y_2])
+            self.centroids_errors_x = ([jnp.array(cex) for cex in centroids_errors_x_1] +
+                                       [jnp.array(cex) for cex in centroids_errors_x_2])
+            self.centroids_errors_y = ([jnp.array(cey) for cey in centroids_errors_y_1] +
+                                       [jnp.array(cey) for cey in centroids_errors_y_2])
             self.n_position = 2 * (jnp.size(jnp.concatenate(self.centroids_x_1, axis=0)) +
                                    jnp.size(jnp.concatenate(self.centroids_x_2, axis=0)))
 
