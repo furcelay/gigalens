@@ -158,7 +158,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         deflection_ratio = params.get('deflection_ratio', self.phys_model.deflection_ratio_constants)
         magnifications = []
         for x_i, y_i in zip(x, y):
-            magnifications.append(self.magnification_1(x_i, y_i, params['lens_mass'], deflection_ratio))
+            magnifications.append(self.magnification_1(x_i, y_i, params['lens_mass']))
         return magnifications
 
     @functools.partial(jit, static_argnums=(0,))
