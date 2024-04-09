@@ -74,7 +74,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             for _ in pbar:
                 loss, params, opt_state = update(params, opt_state)
                 pbar.set_description(
-                    f"Chi-squared: {float(jnp.nanmin(loss, keepdims=True)):.3f}"
+                    f"Chi-squared: {float(jnp.nanmin(loss)):.3f}"
                 )
         return params
 
