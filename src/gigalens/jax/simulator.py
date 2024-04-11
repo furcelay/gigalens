@@ -93,8 +93,6 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         beta_points = []
         beta_barycentre = []
         for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
-            x_i = jnp.repeat(x_i[..., jnp.newaxis], self.bs, axis=-1)
-            y_i = jnp.repeat(y_i[..., jnp.newaxis], self.bs, axis=-1)
             sp = source_light_params.get(str(i), {})
             sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
@@ -139,8 +137,6 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         source_light_constants = self.phys_model.constants.get('source_light', {})
         magnifications = []
         for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
-            x_i = jnp.repeat(x_i[..., jnp.newaxis], self.bs, axis=-1)
-            y_i = jnp.repeat(y_i[..., jnp.newaxis], self.bs, axis=-1)
             sp = source_light_params.get(str(i), {})
             sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
