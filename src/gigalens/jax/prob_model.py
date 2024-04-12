@@ -78,23 +78,23 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         chi2 = 0.
         log_like = 0.
         # TODO: see if need to batch centroids or add dimension
-        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x,
-                                                                        self.centroids_y,
-                                                                        params)
+        beta_points, source_center = simulator.points_beta_barycentre(self.centroids_x,
+                                                                      self.centroids_y,
+                                                                      params)
         magnifications = simulator.points_magnification(self.centroids_x,
                                                         self.centroids_y,
                                                         params)
-        for points, barycentre, cex, cey, mag in zip(beta_points, beta_barycentre,
-                                                     self.centroids_errors_x, self.centroids_errors_y,
-                                                     magnifications):
+        for points, center, cex, cey, mag in zip(beta_points, source_center,
+                                                 self.centroids_errors_x, self.centroids_errors_y,
+                                                 magnifications):
 
-            barycentre = jnp.repeat(barycentre, points.shape[2], axis=2)
+            center = jnp.repeat(center, points.shape[2], axis=2)
 
             mag = jnp.transpose(mag, (1, 0))  # batch size, images
 
             err_map = jnp.stack([cex / mag, cey / mag],
                                axis=1)  # batch size, xy, images
-            chi2_i = jnp.sum(((points - barycentre) / err_map) ** 2, axis=(-2, -1))
+            chi2_i = jnp.sum(((points - center) / err_map) ** 2, axis=(-2, -1))
             normalization_i = jnp.sum(jnp.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
             log_like += -1/2 * (chi2_i + normalization_i)
             chi2 += chi2_i

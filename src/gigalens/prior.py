@@ -151,6 +151,8 @@ def make_prior_and_model(
         s.profile.is_source = True
         if 'deflection_ratio' not in s.params:
             s.params['deflection_ratio'] = 1.
+        if s.profile.name == 'POINT_SOURCE"' and 'amp' not in s.params:
+            s.params['amp'] = 1.
     lenses = [ProfilePrior(m.profile, m.params) for m in lenses]
     sources = [ProfilePrior(m.profile, m.params) for m in sources]
     foreground = [ProfilePrior(m.profile, m.params) for m in foreground]

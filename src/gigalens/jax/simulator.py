@@ -91,17 +91,19 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         source_light_params = params.get('source_light', {})
         source_light_constants = self.phys_model.constants.get('source_light', {})
         beta_points = []
-        beta_barycentre = []
+        source_center = []
         for x_i, y_i, i in zip(x, y, range(len(self.phys_model.source_light))):
             sp = source_light_params.get(str(i), {})
             sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
             beta_points_i = jnp.stack(self.beta(x_i, y_i, lens_params, deflect_rat), axis=0)
             beta_points_i = jnp.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
-            beta_barycentre_i = jnp.mean(beta_points_i, axis=2, keepdims=True)
-            beta_points.append(beta_points_i)
-            beta_barycentre.append(beta_barycentre_i)
-        return beta_points, beta_barycentre
+
+            source_center_i = jnp.stack(((sp | sc)['center_x'], (sp | sc)['center_y']), axis=0)
+            source_center_i = jnp.transpose(source_center_i, (1, 0))  # batch size, xy
+            source_center_i = jnp.expand_dims(source_center_i, axis=-1)  # batch size, xy, 1
+            source_center.append(source_center_i)
+        return beta_points, source_center
 
     @functools.partial(jit, static_argnums=(0,))
     def hessian(self, x, y, lens_params: Dict[str, Dict]):

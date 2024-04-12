@@ -87,22 +87,22 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     def stats_positions(self, simulator: gigalens.tf.simulator.LensSimulator, params):
         chi2 = 0.
         log_like = 0.
-        beta_points, beta_barycentre = simulator.points_beta_barycentre(self.centroids_x,
-                                                                        self.centroids_y,
-                                                                        params)
+        beta_points, source_center = simulator.points_beta_barycentre(self.centroids_x,
+                                                                      self.centroids_y,
+                                                                      params)
         magnifications = simulator.points_magnification(self.centroids_x,
                                                         self.centroids_y,
                                                         params)
-        for points, barycentre, cex, cey, mag in zip(beta_points, beta_barycentre,
-                                                     self.centroids_errors_x, self.centroids_errors_y,
-                                                     magnifications):
-            barycentre = tf.repeat(barycentre, points.shape[2], axis=2)
+        for points, center, cex, cey, mag in zip(beta_points, source_center,
+                                                 self.centroids_errors_x, self.centroids_errors_y,
+                                                 magnifications):
+            center = tf.repeat(center, points.shape[2], axis=2)
 
             mag = tf.transpose(mag, (1, 0))  # batch size, images
 
             err_map = tf.stack([cex / mag, cey / mag],
                                axis=1)  # batch size, xy, images
-            chi2_i = tf.reduce_sum(((points - barycentre) / err_map) ** 2, axis=(-2, -1))
+            chi2_i = tf.reduce_sum(((points - center) / err_map) ** 2, axis=(-2, -1))
             normalization_i = tf.reduce_sum(tf.math.log(2 * np.pi * err_map ** 2), axis=(-2, -1))
             log_like += -1 / 2 * (chi2_i + normalization_i)
             chi2 += chi2_i

@@ -5,7 +5,7 @@ import gigalens.profile
 
 class PointSource(gigalens.profile.LightProfile):
     _name = "POINT_SOURCE"
-    _params = []
+    _params = ["center_x", "center_y"]
     _amp = "amp"
 
     def __init__(self, use_lstsq=False, is_source=True):
