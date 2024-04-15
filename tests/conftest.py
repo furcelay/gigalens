@@ -5,7 +5,7 @@ import pytest
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
-from gigalens.model import PhysicalModel
+from gigalens.tf.physical_model import PhysicalModel
 from gigalens.tf.profiles.light import sersic
 from gigalens.tf.profiles.mass import epl, shear
 
