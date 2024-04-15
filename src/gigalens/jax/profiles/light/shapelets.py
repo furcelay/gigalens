@@ -15,7 +15,7 @@ class Shapelets(gigalens.profile.LightProfile):
 
     def __init__(self, n_max, use_lstsq=False, is_source=False, interpolate=True):
         super(Shapelets, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
-        del self._params[-1]  # Deletes the amp parameter, to be added again later below with numbering convention
+        del self.params[self.params.index(self._amp)]
         self.n_layers = int((n_max + 1) * (n_max + 2) / 2)
         self.n_max = n_max
         self.interpolate = interpolate
@@ -28,7 +28,7 @@ class Shapelets(gigalens.profile.LightProfile):
         decimal_places = len(str(self.n_layers))
         self._amp_names = []
         for i in range(self.n_layers):
-            self._params.append(f"amp{str(i).zfill(decimal_places)}")
+            self.params.append(f"amp{str(i).zfill(decimal_places)}")
             self._amp_names.append(f"amp{str(i).zfill(decimal_places)}")
             self.N1.append(n1)
             self.N2.append(n2)
