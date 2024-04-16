@@ -101,6 +101,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             sp = source_light_params.get(str(i), {})
             sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
+            x_i, y_i = tf.repeat(x_i, self.bs, axis=-1), tf.repeat(y_i, self.bs, axis=-1)
             beta_points_i = tf.stack(self.beta(x_i, y_i, lens_params, deflect_rat), axis=0)
             beta_points_i = tf.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
             beta_barycentre_i = tf.math.reduce_mean(beta_points_i, axis=2, keepdims=True)
@@ -145,6 +146,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             sp = source_light_params.get(str(i), {})
             sc = source_light_constants.get(str(i), {})
             deflect_rat = (sp | sc)['deflection_ratio']
+            x_i, y_i = tf.repeat(x_i, self.bs, axis=-1), tf.repeat(y_i, self.bs, axis=-1)
             magnifications.append(self.magnification(x_i, y_i, lens_params, deflect_rat))
         return magnifications
 
