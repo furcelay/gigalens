@@ -117,8 +117,7 @@ class ModellingSequenceInterface(ABC):
             post_sampling_steps=100,
             ess_threshold_ratio=0.5,
             max_sampling_per_stage=8,
-            likelihood='pixels',
-            auxiliar='positions',
+            sampler='HMC',
             seed=1):
         pass
         """Runs Hamiltonian Monte Carlo (HMC) to draw posterior samples. See Section 2.5 in `our paper <https://arxiv.org/abs/2202.07663>`__.
