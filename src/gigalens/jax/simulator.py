@@ -98,6 +98,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             deflect_rat = (sp | sc)['deflection_ratio']
             beta_points_i = jnp.stack(self.beta(x_i, y_i, lens_params, deflect_rat), axis=0)
             beta_points_i = jnp.transpose(beta_points_i, (2, 0, 1))  # batch size, xy, images
+            beta_points.append(beta_points_i)
 
             source_center_i = jnp.stack(((sp | sc)['center_x'], (sp | sc)['center_y']), axis=0)
             source_center_i = jnp.transpose(source_center_i, (1, 0))  # batch size, xy
