@@ -72,7 +72,7 @@ class ProbabilisticModel(ABC):
         self.exp_time = None
         self.centroids_x = None
         self.centroids_y = None
-        self.centroids_errors_x = None
+        self.centroids_errors_x = None  # TODO: assume symmetric error, only one needed
         self.centroids_errors_y = None
         self.n_position = None
         self.bij = None
