@@ -167,7 +167,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             gamma2 += g2
         return gamma1, gamma2
 
-    @functools.partial(jit, static_argnums=(0,))
+    @functools.partial(jit, static_argnums=(0, 2))
     def simulate(self, params, no_deflection=False):
         lens_params = params.get('lens_mass', {})
         lens_light_params = params.get('lens_light', {})
