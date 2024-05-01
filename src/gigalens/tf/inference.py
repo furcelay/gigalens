@@ -265,5 +265,5 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 seed=seed,
             )
             t_sample = time.time() - t
-            print(f'SMC completed, time: {t_sample / 60:.1f} min')
+            print(f'MCMC completed, time: {t_sample / 60:.1f} min')
         return samples
