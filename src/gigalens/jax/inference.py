@@ -267,13 +267,13 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 likelihood_log_prob_fn=log_like_fn,
                 current_state=start_z,
                 min_num_steps=1,
-                max_num_steps=8,
+                max_num_steps=max_sampling_per_stage,
                 max_stage=100,
                 make_kernel_fn=make_kernel_fn,
                 tuning_fn=lambda ns, ls, la: tfe.mcmc.simple_heuristic_tuning(ns, ls, la, optimal_accept=0.651),
                 make_tempered_target_log_prob_fn=make_tempered_target_log_prob_fn_with_auxiliar(log_aux_fn),
                 resample_fn=tfe.mcmc.resample_systematic,
-                ess_threshold_ratio=0.8,
+                ess_threshold_ratio=ess_threshold_ratio,
                 seed=subkey,
                 name="SMC"
             )
@@ -304,7 +304,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 seed=sub_subkey,
             )
             t_sample = time.time() - t
-            print(f'SMC completed, time: {t_sample / 60:.1f} min')
+            print(f'MCMC completed, time: {t_sample / 60:.1f} min')
         return samples
 
 
