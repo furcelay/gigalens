@@ -76,7 +76,10 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 pbar.set_description(
                     f"Chi-squared: {float(jnp.nanmin(loss)):.3f}"
                 )
-        return params
+        lp, chisq = self.prob_model.log_prob(lens_sim, params)
+        best_z = params[jnp.nanargmax(lp)]
+        best_x = self.prob_model.bij.forward([best_z])
+        return best_x, chisq[jnp.nanargmax(lp)]
 
     def SVI(
             self,
@@ -204,7 +207,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         print(f"Sampling took {(end - start):.1f}s")
         return ret
 
-    def SMC(self,
+    def SMC(self,  # TODO: split between multiple devices
             start=None,
             num_particles=1000,
             num_ensembles=1,
