@@ -28,7 +28,7 @@ class ProfilePrior:
                 self.num_free_params += 1
             else:
                 try:
-                    self.constants[k] = float(p)
+                    self.constants[k] = [float(p)]
                 except TypeError:
                     raise RuntimeError(f"Invalid value {p} for parameter '{k}', should be number or tfp distribution.")
         if self.variables:
