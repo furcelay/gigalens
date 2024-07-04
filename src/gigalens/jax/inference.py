@@ -74,10 +74,10 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 pbar.set_description(
                     f"Chi-squared: {float(jnp.nanmin(loss)):.3f}"
                 )
-        lp, chisq = self.prob_model.log_prob(lens_sim, params)
-        best_z = params[jnp.nanargmax(lp)]
+        log_prob, chi_sq = self.prob_model.log_prob(lens_sim, params)
+        best_z = params[jnp.nanargmax(log_prob)]
         best_x = self.prob_model.bij.forward([best_z])
-        return best_x, chisq[jnp.nanargmax(lp)]
+        return best_x, chi_sq[jnp.nanargmax(log_prob)]
 
     def SVI(
             self,
