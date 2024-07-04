@@ -18,8 +18,6 @@ import gigalens.jax.simulator as sim
 import gigalens.model
 
 
-# TODO: init centroids
-
 class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
     def MAP(
             self,
@@ -207,7 +205,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         print(f"Sampling took {(end - start):.1f}s")
         return ret
 
-    def SMC(self,  # TODO: split between multiple devices
+    def SMC(self,
             start=None,
             num_particles=1000,
             num_ensembles=1,
@@ -217,20 +215,40 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             max_sampling_per_stage=8,
             sampler='HMC',
             seed=1):
+        dev_cnt = jax.device_count()
 
+        # split ensembles if possible, else split particles
+        if num_ensembles % dev_cnt == 0:
+            num_ensembles = num_ensembles // dev_cnt
+        else:
+            num_particles = num_particles // dev_cnt
         n_smc_samples = num_particles * num_ensembles
 
-        key = jax.random.PRNGKey(seed)
-        key, subkey = jax.random.split(key)
+        seed_0, seed_1, seed_2 = jax.random.split(jax.random.PRNGKey(seed), 3)
+        seeds_1 = jax.random.split(seed_1, dev_cnt)
+        seeds_2 = jax.random.split(seed_2, dev_cnt)
+
+        lens_sim = sim.LensSimulator(
+            self.phys_model,
+            self.sim_config,
+            bs=n_smc_samples
+        )
 
         if start is None:
-            start = self.prob_model.prior.sample((num_particles, num_ensembles), seed=key)
+            start = self.prob_model.prior.sample((dev_cnt, num_particles, num_ensembles), seed=seed_0)
             start = self.prob_model.bij.inverse(start)
         else:
-            start = jax.random.choice(key, start, (num_particles, num_ensembles), replace=False)
+            start = jax.random.choice(seed_0, start, (dev_cnt, num_particles, num_ensembles), replace=False)
         n_dim = start.shape[-1]
 
-        lens_sim = sim.LensSimulator(self.phys_model, self.sim_config, bs=n_smc_samples)
+        if sampler == 'HMC':
+            make_kernel_fn = tfe.mcmc.gen_make_hmc_kernel_fn(num_leapfrog_steps=num_leapfrog_steps)
+            tunning_fn = lambda ns, ls, la: tfe.mcmc.simple_heuristic_tuning(ns, ls, la, optimal_accept=0.651)
+        elif sampler == 'RWMH':
+            make_kernel_fn = tfe.mcmc.make_rwmh_kernel_fn
+            tunning_fn = tfe.mcmc.simple_heuristic_tuning
+        else:
+            raise ValueError(f"Unknown sampler: {sampler}, must be 'HMC' or 'RWMH'")
 
         @jit
         def log_like_fn(z):
@@ -242,16 +260,8 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
         def log_prob_fn(z):
             return self.prob_model.log_prob(lens_sim, z)[0]
 
-        def sample_smc(start_z):
-            if sampler == 'HMC':
-                make_kernel_fn = tfe.mcmc.gen_make_hmc_kernel_fn(num_leapfrog_steps=num_leapfrog_steps)
-                tunning_fn = lambda ns, ls, la: tfe.mcmc.simple_heuristic_tuning(ns, ls, la, optimal_accept=0.651)
-            elif sampler == 'RWMH':
-                make_kernel_fn = tfe.mcmc.make_rwmh_kernel_fn
-                tunning_fn = tfe.mcmc.simple_heuristic_tuning
-            else:
-                raise ValueError(f"Unknown sampler: {sampler}, must be 'HMC' or 'RWMH'")
-
+        @pmap
+        def sample_smc(start_z, seed_):
             _, samples_, final_kernel_results = tfe.mcmc.sample_sequential_monte_carlo(
                 prior_log_prob_fn=self.prob_model.log_prior,
                 likelihood_log_prob_fn=log_like_fn,
@@ -263,35 +273,41 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 tuning_fn=tunning_fn,
                 resample_fn=tfe.mcmc.resample_systematic,
                 ess_threshold_ratio=ess_threshold_ratio,
-                seed=subkey,
+                seed=seed_,
                 name="SMC"
             )
-            scalings = jnp.exp(final_kernel_results.particle_info.log_scalings)
+            scalings_ = jnp.exp(final_kernel_results.particle_info.log_scalings)
 
+            return samples_, scalings_
+
+        @pmap
+        def sample_mcmc(start_z, scalings_, seed_):
             kernel = make_kernel_fn(
                 log_prob_fn,
-                [jnp.reshape(samples_, (-1, n_dim))],
-                jnp.reshape(scalings, (-1,)))
-
-            return samples_, kernel
+                [start_z],
+                scalings_
+            )
+            samples_ = tfp.mcmc.sample_chain(
+                num_results=post_sampling_steps,
+                num_burnin_steps=0,
+                current_state=start_z,
+                kernel=kernel,
+                trace_fn=None,
+                seed=seed_,
+            )
+            return samples_
 
         t = time.time()
         print("starting SMC")
-        samples, kernel = sample_smc(start)
+        samples, scalings = sample_smc(start, seeds_1)
+        samples = jnp.reshape(samples, (dev_cnt, -1, n_dim))
+        scalings = jnp.reshape(scalings, (dev_cnt, -1))
         t_sample = time.time() - t
         print(f'SMC completed, time: {t_sample / 60:.1f} min')
         if post_sampling_steps > 0:
-            _, sub_subkey = jax.random.split(subkey)
             t = time.time()
             print("starting MCMC sampling")
-            samples = tfp.mcmc.sample_chain(
-                num_results=post_sampling_steps,
-                num_burnin_steps=0,
-                current_state=jnp.reshape(samples, (-1, n_dim)),
-                kernel=kernel,
-                trace_fn=None,
-                seed=sub_subkey,
-            )
+            samples = sample_mcmc(samples, scalings, seeds_2)
             t_sample = time.time() - t
             print(f'MCMC completed, time: {t_sample / 60:.1f} min')
         return samples
