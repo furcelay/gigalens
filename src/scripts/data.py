@@ -1,5 +1,4 @@
 from astropy.io import fits
-from astropy.wcs import WCS
 from skimage.measure import block_reduce
 import json
 import h5py

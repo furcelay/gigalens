@@ -3,7 +3,6 @@ from gigalens.jax.prob_model import ForwardProbModel
 from gigalens.jax.simulator import LensSimulator
 from gigalens.simulator import SimulatorConfig
 import jax
-from jax import numpy as jnp
 import pickle
 from model import prior, phys_model, model_globals
 from data import (image, psf, mask, binning, bkg_rms, exp_time, centroids_x, centroids_y, centroids_err)
