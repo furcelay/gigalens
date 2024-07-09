@@ -217,11 +217,11 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             seed=1):
         dev_cnt = jax.device_count()
 
-        # split ensembles if possible, else split particles
-        if num_ensembles % dev_cnt == 0:
-            num_ensembles = num_ensembles // dev_cnt
+        # cannot split particles, only ensembles
+        if num_ensembles % dev_cnt != 0:
+            raise ValueError(f"num_ensembles ({num_ensembles}) must be divisible by device count ({dev_cnt})")
         else:
-            num_particles = num_particles // dev_cnt
+            num_ensembles = num_ensembles // dev_cnt
         n_smc_samples = num_particles * num_ensembles
 
         seed_0, seed_1, seed_2 = jax.random.split(jax.random.PRNGKey(seed), 3)
@@ -310,4 +310,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             samples = sample_mcmc(samples, scalings, seeds_2)
             t_sample = time.time() - t
             print(f'MCMC completed, time: {t_sample / 60:.1f} min')
+            samples = jnp.reshape(samples, (post_sampling_steps, -1, n_dim))
+        else:
+            samples = jnp.reshape(samples, (1, -1, n_dim))
         return samples
