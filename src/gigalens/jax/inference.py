@@ -238,7 +238,9 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             start = self.prob_model.prior.sample((dev_cnt, num_particles, num_ensembles), seed=seed_0)
             start = self.prob_model.bij.inverse(start)
         else:
-            start = jax.random.choice(seed_0, start, (dev_cnt, num_particles, num_ensembles), replace=False)
+            n_dim = start.shape[-1]
+            start = jnp.reshape(start, (-1, n_dim))
+            start = jax.random.choice(seed_0, start, (dev_cnt, num_particles, num_ensembles), replace=True)
         n_dim = start.shape[-1]
 
         if sampler == 'HMC':
