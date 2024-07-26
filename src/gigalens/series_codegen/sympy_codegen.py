@@ -87,7 +87,7 @@ def jax_print(fn_names, exprs, args, cse=sp.cse, jit=True):
 
     decorator = ""
     if jit:
-        decorator += "@functools.partial(jit, static_argnums=(0,))"
+        decorator += "@jit"
 
     funcstr = ""
 
@@ -100,7 +100,7 @@ def jax_print(fn_names, exprs, args, cse=sp.cse, jit=True):
 
     impstr = ""
     if jit:
-        impstr += "import functools\nfrom jax import jit\n"
+        impstr += "from jax import jit\n"
     for mod, keys in (getattr(printer, 'module_imports', None) or {}).items():
         for k in keys:
             impstr += f"from {mod} import {k}\n"
