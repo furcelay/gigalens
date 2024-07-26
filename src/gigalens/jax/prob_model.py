@@ -99,9 +99,9 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     @functools.partial(jit, static_argnums=(0, 1))
     def log_prob(self, simulator: sim.LensSimulator, z):
-        log_like, red_chi2 = jnp.zeros(z.shape[0]), jnp.zeros(z.shape[0])
+        log_like, red_chi2 = jnp.zeros(len(z[0])), jnp.zeros(len(z[0]))
         n_chi = 0
-
+        z = list(z.T)
         x = self.bij.forward(z)
 
         if self.include_pixels:
@@ -123,7 +123,8 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
     @functools.partial(jit, static_argnums=(0, 1))
     def log_like(self, simulator, z):
-        log_like, red_chi2 = jnp.zeros(z.shape[0]), jnp.zeros(z.shape[0])
+        log_like, red_chi2 = jnp.zeros(len(z[0])), jnp.zeros(len(z[0]))
+        z = list(z.T)
         x = self.bij.forward(z)
 
         if self.include_pixels:
@@ -135,6 +136,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         return log_like
 
     def log_prior(self, z):
+        z = list(z.T)
         x = self.bij.forward(z)
         return self.prior.log_prob(x) + self.bij.forward_log_det_jacobian(z)
 

@@ -48,7 +48,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             if start is None
             else start
         )
-        params = self.prob_model.bij.inverse(start)
+        params = jnp.stack(self.prob_model.bij.inverse(start)).T
 
         opt_state = optimizer.init(params)
 
@@ -75,8 +75,8 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                     f"Chi-squared: {float(jnp.nanmin(loss)):.3f}"
                 )
         log_prob, chi_sq = self.prob_model.log_prob(lens_sim, params)
-        best_z = params[jnp.nanargmax(log_prob)]
-        best_x = self.prob_model.bij.forward([best_z])
+        best_z = params[jnp.nanargmax(log_prob)][jnp.newaxis, :]
+        best_x = self.prob_model.bij.forward(list(best_z.T))
         return best_x, chi_sq[jnp.nanargmax(log_prob)]
 
     def SVI(
@@ -236,7 +236,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
 
         if start is None:
             start = self.prob_model.prior.sample((dev_cnt, num_particles, num_ensembles), seed=seed_0)
-            start = self.prob_model.bij.inverse(start)
+            start = jnp.stack(self.prob_model.bij.inverse(start)).T
         else:
             start = jax.random.choice(seed_0, start, (dev_cnt, num_particles, num_ensembles), replace=False)
         n_dim = start.shape[-1]
