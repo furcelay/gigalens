@@ -75,7 +75,7 @@ def model_plot(model_params, image, phys_model, sim_config, exp_time, bkg_rms):
     ax[0].text(10, 11, "5''",
             color='w', fontsize=14)
 
-    ax[0].text(5, image.shape[0] - 50, "Data",
+    ax[0].text(5, image.shape[0] - 15, "Data",
             color='w', fontsize=14)
 
     im1 = ax[1].imshow(simulated, norm=mpl.colors.PowerNorm(0.5, vmin=0, vmax=1.5), cmap='afmhot', origin="lower")
@@ -88,7 +88,7 @@ def model_plot(model_params, image, phys_model, sim_config, exp_time, bkg_rms):
     ax[1].text(10, 11, "5''",
             color='w', fontsize=14)
 
-    ax[1].text(5, image.shape[0] - 50, "Model",
+    ax[1].text(5, image.shape[0] - 15, "Model",
             color='w', fontsize=14)
 
     resid = image - simulated
@@ -103,7 +103,7 @@ def model_plot(model_params, image, phys_model, sim_config, exp_time, bkg_rms):
     ax[2].text(15, 11, "5''",
             color='k', fontsize=14)
 
-    ax[2].text(5, image.shape[0] - 50, "Normalized Residual",
+    ax[2].text(5, image.shape[0] - 15, "Normalized Residual",
             color='k', fontsize=14)
 
     cbar1 = fig.colorbar(im1, ax=ax[1], orientation='horizontal', pad=0.02, ticks=[0, 0.5, 1.0, 1.5])

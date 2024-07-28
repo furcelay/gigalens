@@ -99,10 +99,10 @@ def get_samples_stats(samples_z, prob_model, lens_sim):
 
     log_prob = jnp.stack([prob_model.log_prob(lens_sim, samples_z[i])[0] for i in range(samples_z.shape[0])], axis=0)
     map_idx = np.unravel_index(np.argmax(log_prob), log_prob.shape)
-    map_estimate = prob_model.bij.forward([samples_z[map_idx]])
+    map_estimate = prob_model.bij.forward(list(samples_z[map_idx][...,jnp.newaxis]))
 
     samples_z = jnp.reshape(samples_z, (-1, n_dim))
-    median_estimate = [[np.percentile(samples_z[...,i], 50).astype('float32') for i in range(samples_z.shape[-1])]]
+    median_estimate = [[np.percentile(samples_z[...,i], 50).astype('float32')] for i in range(samples_z.shape[-1])]
     median_estimate = prob_model.bij.forward(median_estimate)
 
     return map_estimate, median_estimate, R_conv
