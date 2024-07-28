@@ -6,7 +6,7 @@ from gigalens.simulator import SimulatorConfig
 import numpy as np
 
 
-def flatten_samples(samples, components=('lens_mass')):
+def flatten_samples(samples, components=('lens_mass',)):
     flat_samples = []
     labels = []
     for k0 in components:
