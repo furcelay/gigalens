@@ -78,7 +78,7 @@ lens_sim = LensSimulator(
         )
 
 map_estimate, median_estimate, R_conv = get_samples_stats(samples_z, prob_model, lens_sim)
-samples = prob_model.bij.forward(samples_z)
+samples = prob_model.bij.forward(list(samples_z.T))
 print(f"R_conv mean {R_conv.mean():1.2e}, max {R_conv.max():1.2e}")
 
 with open(f'samples/samples_SMC_{input_model}.pkl', 'wb') as f:
@@ -104,7 +104,7 @@ if num_samples_hmc > 0:
     print("stage 2 done!\nSummary stats:\n")
 
     map_estimate, median_estimate, R_conv = get_samples_stats(new_samples_z, prob_model, lens_sim)
-    samples = prob_model.bij.forward(new_samples_z)
+    samples = prob_model.bij.forward(list(new_samples_z.T))
     print(f"R_conv mean {R_conv.mean():1.2e}, max {R_conv.max():1.2e}")
 
     with open(f'samples/samples_HMC_{input_model}.pkl', 'wb') as f:
