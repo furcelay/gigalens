@@ -107,7 +107,7 @@ if num_samples_hmc > 0:
 
     map_estimate, median_estimate, R_conv = get_samples_stats(new_samples_z, prob_model, lens_sim)
     samples = prob_model.bij.forward(list(new_samples_z.T))
-    print(f"R_conv mean {R_conv.mean():1.2e}, max {R_conv.max():1.2e}")
+    print(f"R_conv mean {np.nanmean(R_conv):1.2e}, max {np.nanmax(R_conv):1.2e}")
 
     with open(f'samples/samples_HMC_{input_model}.pkl', 'wb') as f:
         pickle.dump(samples, f)
