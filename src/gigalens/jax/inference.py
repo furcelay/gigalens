@@ -258,6 +258,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
 
         @jit
         def log_prior_fn(z):
+            z = jnp.reshape(z, (n_smc_samples, -1))
             lp = self.prob_model.log_prior(z)
             return jnp.reshape(lp, (num_particles, num_ensembles))
 
