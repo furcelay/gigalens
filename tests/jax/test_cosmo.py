@@ -73,6 +73,12 @@ class TestCosmo(unittest.TestCase):
         d = self.cosmo.lensing_distance(z_source, **self.cosmo_params)
         npt.assert_allclose(d, d_ref, rtol=1e-5)
 
+    def test_deflection_ratio(self):
+        cosmo = Cosmo(z_lens=0.49, z_source_ref=1.43)
+        z_source = np.array([0.96])
+        dr = cosmo.deflection_ratio(z_source, **self.cosmo_params)
+        npt.assert_almost_equal(dr, 0.74982506, decimal=5)
+
     def test_multi_param(self):
         z_source = np.array([0.7])
         cosmo_params = {
