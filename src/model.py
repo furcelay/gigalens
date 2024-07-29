@@ -115,7 +115,14 @@ source_model = [
         )
     ),
 ]
-
+extra_point_source_model = [
+            Prior(
+                light.point_source.PointSource(),
+                dict(
+                    deflection_ratio = deflect_ratio_sources[i]
+                    )
+            ) for i in [2, 2, 3, 3, 4, 4]  # 3.2, 3.3, 4.2, 4.3, 5.2, 5.3
+]
 
 foreground_gals = []
 
@@ -145,6 +152,7 @@ prior, phys_model = make_prior_and_model(
     ],
     sources=[
         *source_model,
+        *extra_point_source_model,
     ],
     foreground=[
         *foreground_gals
