@@ -18,7 +18,7 @@ class Cosmo(CosmoBase):
         omega_rad0 = self.omega_rad0(H0/100)
         radiation = omega_rad0 * (1 + z)**4
         omega_k0 = - k / H0 ** 2
-        curvature = self.omega_k0 * (1 + z)**2
+        curvature = omega_k0 * (1 + z)**2
         omega_de0 = (1.0 - omega_mat0 - omega_rad0 - omega_k0)
         dark_energy = self.dark_energy_eos(z, omega_de0, wde)
 
@@ -55,16 +55,16 @@ class Cosmo(CosmoBase):
         # "This function returns the luminosity distance at redshift z"   HOGG EC.(21)
         return (1 + z) * self.comoving_distance(z)
 
-    def lensing_distance(self, zl, zs, H0, omega_mat0, k, wde):
+    def lensing_distance(self, z_source, H0, omega_mat0, k, wde):
         def integrand(z):
             return 1.0 / self.Ez_model(z, H0, omega_mat0, k, wde)
-        d_ls = integrate(integrand, zl, zs)
-        d_s = integrate(integrand, 0, zs)
+        d_ls = integrate(integrand, self.z_lens, z_source)
+        d_s = integrate(integrand, 0, z_source)
         return d_ls / d_s
 
-    def deflection_ratio(self, zl, zs, z_ref, H0, omega_mat0, k, wde):
-        d_lensing = self.lensing_distance(zl, zs, H0, omega_mat0, k, wde)
-        d_ref = self.lensing_distance(zl, z_ref, H0, omega_mat0, k, wde)
+    def deflection_ratio(self, z_source, H0, omega_mat0, k, wde):
+        d_lensing = self.lensing_distance(z_source, H0, omega_mat0, k, wde)
+        d_ref = self.lensing_distance(self.z_source_ref, H0, omega_mat0, k, wde)
         return d_lensing / d_ref
 
 

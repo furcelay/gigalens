@@ -108,8 +108,10 @@ class MassProfile(Parameterized, ABC):
 
 class CosmoBase(Parameterized, ABC):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, z_lens, z_source_ref=10.0, *args, **kwargs):
         super(CosmoBase, self).__init__(*args, **kwargs)
+        self.z_lens = z_lens
+        self.z_source_ref = z_source_ref
 
     @abstractmethod
     def Ez_model(self, z, H0, omega_mat0, k, wde):
