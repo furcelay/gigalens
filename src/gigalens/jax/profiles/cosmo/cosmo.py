@@ -1,78 +1,71 @@
 import jax.numpy as jnp
+from gigalens.profile import CosmoBase
 
 
-class Cosmo:
+class Cosmo(CosmoBase):
+    _name = "dPIS"
+    _params = ['theta_E', 'r_core', 'r_cut', 'center_x', 'center_y']
+
     neff0 = 3.04  # number of relativistic species
     c = 299792  # km/s #speed of light
     kmtoMpc = 3.2408e-20
 
-    def __init__(self, H0=70, omega_mat0=0.3, wde=-1.0, k=0.0):
-        self.h = H0 / 100
-        self.H0 = H0
-        self.H0s = self.H0 * self.kmtoMpc
-        self.omega_mat0 = omega_mat0
-        self.wde = wde  # Eq of state dark energy
-        self.c_over_H0 = self.c * self.kmtoMpc / self.H0s  # c/H0
-        self.omega_k0 = - k / self.H0 ** 2  # curvature density parameter
-        self.omega_de0 = (1.0 - self.omega_mat0 - self.omega_rad0 - self.omega_k0)
-
-    @property
-    def omega_rad0(self):
-        return 2.469e-5 * self.h**-2.0 * (1.0 + 0.2271 * self.neff0)
-
-    def Ez_model(self, z):
+    def Ez_model(self, z, H0, omega_mat0, k, wde):
         """
         dimensionless Friedmann equation
         """
-        matter = self.omega_mat0 * (1 + z)**3
-        radiation = self.omega_rad0 * (1 + z)**4
-        dark_energy = self.dark_energy_eos(z)
+        matter = omega_mat0 * (1 + z)**3
+        omega_rad0 = self.omega_rad0(H0/100)
+        radiation = omega_rad0 * (1 + z)**4
+        omega_k0 = - k / H0 ** 2
         curvature = self.omega_k0 * (1 + z)**2
+        omega_de0 = (1.0 - omega_mat0 - omega_rad0 - omega_k0)
+        dark_energy = self.dark_energy_eos(z, omega_de0, wde)
 
         E = jnp.sqrt(matter + radiation + dark_energy + curvature)
         return E
 
-    def dark_energy_eos(self, z):
-        exponent = 3 * (1 + self.wde)
-        return self.omega_de0 * (1 + z) ** exponent
+    def omega_rad0(self, h):
+        return 2.469e-5 * h**-2.0 * (1.0 + 0.2271 * self.neff0)
 
-    # this function computes the theoretical Dth for lens analysis
-    def lens_distance(self, zl, zs):
+    def dark_energy_eos(self, z, omega_de0, wde):
+        exponent = 3 * (1 + wde)
+        return omega_de0 * (1 + z) ** exponent
+
+    def comoving_distance(self, z, H0, omega_mat0, k, wde):
         def integrand(z):
-            return 1.0 / self.Ez_model(z)
-        d_ls = integrate(integrand, zl, zs)
-        d_s = integrate(integrand, 0, zs)
-        return d_ls / d_s
+            return 1.0 / self.Ez_model(z, H0, omega_mat0, k, wde)
 
-    def f_model(self, z=0):
-        # This function returns the inverse of the dimensionless Friedmann equation
-        return 1.0 / self.Ez_model(z)
-
-    def comoving_distance(self, z):
+        c_over_H0 = self.c * self.kmtoMpc / H0
         # This function returns the transverse comoving distance for a flat Universe  HOGG EC.(16)
-        return self.c_over_H0 * integrate(self.f_model, 0, z)
+        return c_over_H0 * integrate(integrand, 0, z)
 
-    def angular_distance(self, z):
+    def angular_distance(self, z, H0, omega_mat0, k, wde):
         # This function returns the angular diameter distance to any source at redshift z  HOGG EC.(18)
-        return (1 / (1 + z)) * self.comoving_distance(z)
+        return (1 / (1 + z)) * self.comoving_distance(z, H0, omega_mat0, k, wde)
 
-    def angular_distance_z1z2(self, z1, z2):
+    def angular_distance_z1z2(self, z1, z2, H0, omega_mat0, k, wde):
+        def integrand(z):
+            return 1.0 / self.Ez_model(z, H0, omega_mat0, k, wde)
+        c_over_H0 = self.c * self.kmtoMpc / H0
         # "This function returns the angular diameter distance between two objects"  HOGG EC.(19)
-        return (self.c_over_H0 / (1 + z2)) * integrate(self.f_model, z1, z2)
+        return (c_over_H0 / (1 + z2)) * integrate(integrand, z1, z2)
 
     def luminosity_distance(self, z=0):
         # "This function returns the luminosity distance at redshift z"   HOGG EC.(21)
         return (1 + z) * self.comoving_distance(z)
 
+    def lensing_distance(self, zl, zs, H0, omega_mat0, k, wde):
+        def integrand(z):
+            return 1.0 / self.Ez_model(z, H0, omega_mat0, k, wde)
+        d_ls = integrate(integrand, zl, zs)
+        d_s = integrate(integrand, 0, zs)
+        return d_ls / d_s
 
-class LambdaCDM(Cosmo):
-    def __init__(self, H0=70.0, omega_mat0=0.3):
-        super().__init__(H0=H0, omega_mat0=omega_mat0)
-
-
-class wCDM(Cosmo):
-    def __init__(self, H0=70.0, omega_mat0=0.3, wde=-1.):
-        super().__init__(H0=H0, omega_mat0=omega_mat0, wde=wde)
+    def deflection_ratio(self, zl, zs, z_ref, H0, omega_mat0, k, wde):
+        d_lensing = self.lensing_distance(zl, zs, H0, omega_mat0, k, wde)
+        d_ref = self.lensing_distance(zl, z_ref, H0, omega_mat0, k, wde)
+        return d_lensing / d_ref
 
 
 def integrate(func, z_min, z_max, n_grid=1000):

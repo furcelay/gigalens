@@ -105,3 +105,12 @@ class MassProfile(Parameterized, ABC):
         """
         pass
 
+
+class CosmoBase(Parameterized, ABC):
+
+    def __init__(self, *args, **kwargs):
+        super(CosmoBase, self).__init__(*args, **kwargs)
+
+    @abstractmethod
+    def Ez_model(self, z, H0, omega_mat0, k, wde):
+        pass
