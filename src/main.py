@@ -101,7 +101,7 @@ model_fig.savefig(f'samples/model_SMC_{input_model}.png')
 
 if num_samples_hmc > 0:
     print("sampling stage 2: HMC preconditioned\n")
-    new_samples_z = sample_hmc(samples_z[:,-1], lens_sim, prob_model, num_samples_hmc, num_burnin, num_adaptation_steps,
+    new_samples_z = sample_hmc(samples_z, lens_sim, prob_model, num_samples_hmc, num_burnin, num_adaptation_steps,
                                step_size=1.0, num_leapfrog_steps=10,
                                seed=0)
     print("stage 2 done!\nSummary stats:\n")

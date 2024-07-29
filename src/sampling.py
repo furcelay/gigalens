@@ -38,10 +38,11 @@ def add_model_scatter(start_model, prior, num_samples=100, scatter=0.1, seed=0):
     return start
 
 
+
 def sample_hmc(
-    start, 
-    lens_sim, 
-    prob_model, 
+    start_samples,
+    lens_sim,
+    prob_model,
     num_samples,
     num_burnin,
     num_adaptation_steps,
@@ -49,9 +50,9 @@ def sample_hmc(
     num_leapfrog_steps=10,
     seed=0):
 
-    cov_estimate = jnp.cov(jnp.reshape(start, (-1, start.shape[-1])).T)
+    cov_estimate = jnp.cov(jnp.reshape(start_samples, (-1, start_samples.shape[-1])).T)
     momentum_distribution = tfd.MultivariateNormalFullCovariance(
-                                loc=jnp.zeros(start.shape[-1]),
+                                loc=jnp.zeros(start_samples.shape[-1]),
                                 covariance_matrix=jnp.linalg.inv(cov_estimate),
             )
 
@@ -84,10 +85,11 @@ def sample_hmc(
 
     t = time()
     seeds = jax.random.split(jax.random.PRNGKey(seed), jax.device_count())
-    samples_z = run_hmc(start, seeds)
+    samples_z = run_hmc(start_samples[:,-1], seeds)
     t_sample = time() - t
     print(f'time: {t_sample / 60:.1f} min')
     return samples_z
+
 
 
 def get_samples_stats(samples_z, prob_model, lens_sim):
