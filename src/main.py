@@ -56,7 +56,7 @@ fitter = ModellingSequence(
 with open(f"models/best_{input_model}.pkl", 'rb') as f:
     init_model = pickle.load(f)
 
-start = add_model_scatter(init_model, prior, num_samples_smc, scatter=0.1, seed=1)
+start = add_model_scatter(init_model, prior, num_samples_smc, scatter=std_frac, seed=1)
 start = jnp.stack(prob_model.bij.inverse(start), axis=-1)
 
 print("sampling stage 1: SMC + HMC\n")
