@@ -36,7 +36,7 @@ class Cosmo(CosmoBase):
         def integrand(z):
             return 1.0 / self.efunc(z, H0, Om0, k, w0)
         # This function returns the transverse comoving distance for a flat Universe  HOGG EC.(16)
-        return (self.c/ H0) * integrate(integrand, z2, z2)
+        return (self.c/ H0) * integrate(integrand, z1, z2)
 
     def comoving_distance(self, z, H0, Om0, k, w0):
         return self.comoving_distance_z1z2(0, z, H0, Om0, k, w0)
@@ -46,11 +46,11 @@ class Cosmo(CosmoBase):
         return (1 / (1 + z)) * self.comoving_distance(z, H0, Om0, k, w0)
 
     def angular_distance_z1z2(self, z1, z2, H0, Om0, k, w0):
-        return (1 / (1 + z2)) * self.comoving_distance(z1, z2, H0, Om0, k, w0)
+        return (1 / (1 + z2)) * self.comoving_distance_z1z2(z1, z2, H0, Om0, k, w0)
 
-    def luminosity_distance(self, z=0):
+    def luminosity_distance(self, z, H0, Om0, k, w0):
         # "This function returns the luminosity distance at redshift z"   HOGG EC.(21)
-        return (1 + z) * self.comoving_distance(z)
+        return (1 + z) * self.comoving_distance(z, H0, Om0, k, w0)
 
     def lensing_distance(self, z_source, H0, Om0, k, w0):
         d_ls = self.angular_distance_z1z2(self.z_lens, z_source, H0, Om0, k, w0)
@@ -63,34 +63,8 @@ class Cosmo(CosmoBase):
         return d_lensing / d_ref
 
 
-def lin_integrate(func, z_min, z_max, n_grid=1000):
+def integrate(func, z_min, z_max, n_grid=1000):
     z = jnp.linspace(z_min, z_max, n_grid)
     f = func(z)
     integrated = jax.scipy.integrate.trapezoid(f, z, axis=0)
     return integrated
-
-
-def log_integrate(func, z_min, z_max, n_grid=1000):
-    min_logz = jnp.log(z_min)
-    max_logz = jnp.log(z_max)
-    dlogz = (max_logz - min_logz) / (n_grid - 1)
-    z = jnp.logspace(
-        min_logz + dlogz / 2.0,
-        max_logz + dlogz / 2.0,
-        n_grid,
-        base=jnp.e,
-    )
-    print(z)
-    y = func(z)
-    print(y.shape)
-    print(y)
-    return jnp.sum(y * dlogz * z, axis=0)
-
-
-def integrate(func, z_min, z_max, n_grid=1000, method='lin'):
-    if method == 'log':
-        return log_integrate(func, z_min, z_max, n_grid)
-    elif method == 'lin':
-        return lin_integrate(func, z_min, z_max, n_grid)
-    else:
-        raise ValueError(f"Method {method} not recognized")
