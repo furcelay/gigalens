@@ -10,6 +10,7 @@ class PointSource(gigalens.profile.LightProfile):
 
     def __init__(self, use_lstsq=False, is_source=True):
         super(PointSource, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
+        self.params.pop(self.params.index(self._amp))
 
     @tf.function
     def light(self, x, y):
