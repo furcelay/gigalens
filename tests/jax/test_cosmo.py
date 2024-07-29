@@ -73,6 +73,17 @@ class TestCosmo(unittest.TestCase):
         d = self.cosmo.lensing_distance(z_source, **self.cosmo_params)
         npt.assert_allclose(d, d_ref, rtol=1e-5)
 
+    def test_multi_param(self):
+        z_source = np.array([0.7])
+        cosmo_params = {
+            'H0': 70,
+            'Om0': np.array([0.3, 0.4, 0.5]),
+            'k': 0.0,
+            'w0': -1
+        }
+        d = self.cosmo.lensing_distance(z_source, **cosmo_params)
+        assert d.shape == (3,)
+
 
 if __name__ == '__main__':
     unittest.main()

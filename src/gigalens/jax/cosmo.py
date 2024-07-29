@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 import jax
-from gigalens.profile import CosmoBase
+from gigalens.cosmo import CosmoBase
 
 
 class Cosmo(CosmoBase):
@@ -12,6 +12,8 @@ class Cosmo(CosmoBase):
 
     def __init__(self, z_lens, z_source_ref=10.0):
         super(Cosmo, self).__init__(z_lens, z_source_ref)
+        self.z_lens = jnp.array([z_lens])
+        self.z_source_ref = jnp.array([z_source_ref])
 
     def efunc(self, z, H0, Om0, k, w0):
         """

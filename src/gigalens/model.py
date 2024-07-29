@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict
 
+import gigalens.cosmo
 import gigalens.profile
 
 
@@ -24,7 +25,7 @@ class PhysicalModelBase(ABC):
         lenses: List[gigalens.profile.MassProfile],
         lens_light: List[gigalens.profile.LightProfile],
         source_light: List[gigalens.profile.LightProfile],
-        cosmo: gigalens.profile.CosmoBase,
+        cosmo: gigalens.cosmo.CosmoBase,
         constants: Dict = None
     ):
         self.lenses = lenses
