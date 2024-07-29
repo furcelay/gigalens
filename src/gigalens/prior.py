@@ -102,6 +102,7 @@ class LensPrior:
         self.num_free_params += self.sources.num_free_params
         self.num_free_params += self.lenses.num_free_params
         self.num_free_params += self.foreground.num_free_params
+        self.num_free_params += self.cosmo.num_free_params
 
         self.constants = {self.lenses_key: self.lenses.constants,
                           self.sources_key: self.sources.constants,
@@ -114,7 +115,8 @@ class LensPrior:
             priors[self.sources_key] = self.sources.prior
         if self.foreground.prior is not None:
             priors[self.foreground_key] = self.foreground.prior
-        priors[self.cosmo_key] = self.cosmo.prior
+        if self.cosmo.prior is not None:
+            priors[self.cosmo_key] = self.cosmo.prior
 
         self.prior = None
         if priors:
@@ -158,10 +160,10 @@ def make_prior_and_model(
         sources = []
     if foreground is None:
         foreground = []
+    if cosmo is None:
+        raise RuntimeError("cosmo must be provided.")
     for s in sources:
         s.profile.is_source = True
-        if 'deflection_ratio' not in s.params:
-            s.params['deflection_ratio'] = 1.
     lenses = [ProfilePrior(m.profile, m.params) for m in lenses]
     sources = [ProfilePrior(m.profile, m.params) for m in sources]
     foreground = [ProfilePrior(m.profile, m.params) for m in foreground]
