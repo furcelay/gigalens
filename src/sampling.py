@@ -45,6 +45,8 @@ def sample_hmc(
     num_samples,
     num_burnin,
     num_adaptation_steps,
+    step_size=1.0,
+    num_leapfrog_steps=10,
     seed=0):
 
     cov_estimate = jnp.cov(jnp.reshape(start, (-1, start.shape[-1])).T)
@@ -58,8 +60,8 @@ def sample_hmc(
         precond_kernel = tfp.experimental.mcmc.PreconditionedHamiltonianMonteCarlo(
             target_log_prob_fn=lambda x: prob_model.log_prob(lens_sim, x)[0],
             momentum_distribution=momentum_distribution,
-            step_size=1.,
-            num_leapfrog_steps=10,
+            step_size=step_size,
+            num_leapfrog_steps=num_leapfrog_steps,
         )
 
         # precond_kernel = tfp.experimental.mcmc.GradientBasedTrajectoryLengthAdaptation(

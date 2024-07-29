@@ -14,14 +14,14 @@ from plotting import corner_plot, model_plot
 
 
 input_model = 'model_s1345_refined_shear'
-std_frac = 0.1
-num_particles = 10
+std_frac = 0.01
+num_particles = 500
 num_ensembles = jax.device_count()
 num_samples_smc = num_particles * num_ensembles
-post_sampling_steps = 100
+post_sampling_steps = 500
 
-num_samples_hmc = 100
-num_burnin = 100
+num_samples_hmc = 500
+num_burnin = 200
 num_adaptation_steps = int(num_burnin * 0.8)
 
 pix_scale = model_globals['pix_scale'] * binning
@@ -102,6 +102,7 @@ model_fig.savefig(f'samples/model_SMC_{input_model}.png')
 if num_samples_hmc > 0:
     print("sampling stage 2: HMC preconditioned\n")
     new_samples_z = sample_hmc(samples_z[:,-1], lens_sim, prob_model, num_samples_hmc, num_burnin, num_adaptation_steps,
+                               step_size=1.0, num_leapfrog_steps=10,
                                seed=0)
     print("stage 2 done!\nSummary stats:\n")
 
