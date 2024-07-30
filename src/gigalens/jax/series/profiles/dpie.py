@@ -1,4 +1,3 @@
-import functools
 from jax import jit
 from jax.numpy import log
 from jax.numpy import arctan2
