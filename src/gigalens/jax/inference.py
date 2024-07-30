@@ -320,7 +320,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             print(f'MCMC completed, time: {t_sample / 60:.1f} min')
             # shape (dev_cnt, post_sampling_steps, n_particles * n_ensembles / dev_cnt, n_dim)
             # -> (post_sampling_steps, n_particles * n_ensembles, n_dim)
-            samples = jnp.transpose(samples, (1, 0, 2, 3))
+            samples = jnp.swapaxes(samples, 0, 1)
             samples = jnp.reshape(samples, (post_sampling_steps, -1, n_dim))
         else:
             # shape (dev_cnt, n_particles * n_ensembles / dev_cnt, n_dim)
