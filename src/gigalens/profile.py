@@ -42,7 +42,7 @@ class LightProfile(Parameterized, ABC):
         if not self.use_lstsq:
             self.params.append(self._amp)
         if is_source:
-            self.params.append("deflection_ratio")
+            self.params.append("z_source")
 
     @property
     def use_lstsq(self):
@@ -71,9 +71,9 @@ class LightProfile(Parameterized, ABC):
              is_source (bool): Whether the light profile is a lensed source
         """
         if is_source and not self.is_source:  # Include the deflection ratio to set the source distance
-            self.params.append("deflection_ratio")
+            self.params.append("z_source")
         elif not is_source and self.is_source:
-            self.params.pop(self.params.index("deflection_ratio"))
+            self.params.pop(self.params.index("z_source"))
         self._is_source = is_source
 
     @abstractmethod
@@ -104,4 +104,5 @@ class MassProfile(Parameterized, ABC):
 
         """
         pass
+
 

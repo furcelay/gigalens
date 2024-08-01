@@ -2,6 +2,7 @@ from typing import List, Dict
 
 from jax import numpy as jnp
 
+import gigalens.cosmo
 import gigalens.model
 import gigalens.profile
 
@@ -26,10 +27,11 @@ class PhysicalModel(gigalens.model.PhysicalModelBase):
             lenses: List[gigalens.profile.MassProfile],
             lens_light: List[gigalens.profile.LightProfile],
             source_light: List[gigalens.profile.LightProfile],
+            cosmo: gigalens.cosmo.CosmoBase,
             constants: Dict = None,
     ):
 
-        super(PhysicalModel, self).__init__(lenses, lens_light, source_light,
+        super(PhysicalModel, self).__init__(lenses, lens_light, source_light, cosmo,
                                             constants)
         self._constants = _to_jnp_array(self._constants)
 

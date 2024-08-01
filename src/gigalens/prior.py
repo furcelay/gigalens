@@ -75,7 +75,9 @@ class LensPrior:
     def __init__(self,
                  lenses: Optional[List[ProfilePrior]] = None,
                  sources: Optional[List[ProfilePrior]] = None,
-                 foreground: Optional[List[ProfilePrior]] = None):
+                 foreground: Optional[List[ProfilePrior]] = None,
+                 cosmo: ProfilePrior = None
+                 ):
 
         if foreground is None:
             foreground = []
@@ -83,23 +85,29 @@ class LensPrior:
             sources = []
         if lenses is None:
             lenses = []
+        if cosmo is None:
+            raise RuntimeError("cosmo must be provided.")
 
         self.lenses_key = 'lens_mass'  # TODO: change model component keys
         self.sources_key = 'source_light'
         self.foreground_key = 'lens_light'
+        self.cosmo_key = 'cosmo'
 
         self.lenses = CompoundPrior(lenses)
         self.sources = CompoundPrior(sources)
         self.foreground = CompoundPrior(foreground)
+        self.cosmo = cosmo
 
         self.num_free_params = 0
         self.num_free_params += self.sources.num_free_params
         self.num_free_params += self.lenses.num_free_params
         self.num_free_params += self.foreground.num_free_params
+        self.num_free_params += self.cosmo.num_free_params
 
         self.constants = {self.lenses_key: self.lenses.constants,
                           self.sources_key: self.sources.constants,
-                          self.foreground_key: self.foreground.constants}
+                          self.foreground_key: self.foreground.constants,
+                          self.cosmo_key: self.cosmo.constants}
         priors = {}
         if self.lenses.prior is not None:
             priors[self.lenses_key] = self.lenses.prior
@@ -107,6 +115,8 @@ class LensPrior:
             priors[self.sources_key] = self.sources.prior
         if self.foreground.prior is not None:
             priors[self.foreground_key] = self.foreground.prior
+        if self.cosmo.prior is not None:
+            priors[self.cosmo_key] = self.cosmo.prior
 
         self.prior = None
         if priors:
@@ -127,6 +137,7 @@ class LensPrior:
             lenses=self.lenses.profiles,
             source_light=self.sources.profiles,
             lens_light=self.foreground.profiles,
+            cosmo=self.cosmo.profile,
             constants=self.constants
         )
 
@@ -140,20 +151,22 @@ class LensPrior:
 def make_prior_and_model(
         lenses: List[Prior] = None,
         sources: List[Prior] = None,
-        foreground: List[Prior] = None):
+        foreground: List[Prior] = None,
+        cosmo: Prior = None
+):
     if lenses is None:
         lenses = []
     if sources is None:
         sources = []
     if foreground is None:
         foreground = []
+    if cosmo is None:
+        raise RuntimeError("cosmo must be provided.")
     for s in sources:
         s.profile.is_source = True
-        if 'deflection_ratio' not in s.params:
-            s.params['deflection_ratio'] = 1.
     lenses = [ProfilePrior(m.profile, m.params) for m in lenses]
     sources = [ProfilePrior(m.profile, m.params) for m in sources]
     foreground = [ProfilePrior(m.profile, m.params) for m in foreground]
-    lens_prior = LensPrior(lenses, sources, foreground)
+    cosmo = ProfilePrior(cosmo.profile, cosmo.params)
+    lens_prior = LensPrior(lenses, sources, foreground, cosmo)
     return lens_prior.get_prior(), lens_prior.get_physical_model()
-
