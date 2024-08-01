@@ -34,5 +34,5 @@ class Cosmo(CosmoBase):
     def _integrate(func, z_min, z_max, n_grid=1000):
         z = jnp.linspace(z_min, z_max, n_grid)
         f = func(z)
-        integrated = jax.scipy.integrate.trapezoid(f, z, axis=0)
+        integrated = jnp.trapz(f, z, axis=0)
         return integrated
