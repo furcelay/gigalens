@@ -74,8 +74,14 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 pbar.set_description(
                     f"Chi-squared: {float(jnp.nanmin(loss)):.3f}"
                 )
-        log_prob, chi_sq = self.prob_model.log_prob(lens_sim, list(params.T))
-        best_z = params[jnp.nanargmax(log_prob)][jnp.newaxis, :]
+
+        def log_prob_fn(z):
+            return self.prob_model.log_prob(lens_sim, z)
+
+        splt_params = jnp.array(jnp.split(params, dev_cnt, axis=0))
+        log_prob, chi_sq = jax.pmap(log_prob_fn)(splt_params)
+        map_idx = jnp.unravel_index(jnp.nanargmax(log_prob), log_prob.shape)
+        best_z = splt_params[map_idx][jnp.newaxis, :]
         best_x = self.prob_model.bij.forward(list(best_z.T))
         return best_x, chi_sq[jnp.nanargmax(log_prob)]
 
