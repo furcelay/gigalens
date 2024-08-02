@@ -74,7 +74,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 pbar.set_description(
                     f"Chi-squared: {float(jnp.nanmin(loss)):.3f}"
                 )
-        log_prob, chi_sq = self.prob_model.log_prob(lens_sim, params)
+        log_prob, chi_sq = self.prob_model.log_prob(lens_sim, list(params.T))
         best_z = params[jnp.nanargmax(log_prob)][jnp.newaxis, :]
         best_x = self.prob_model.bij.forward(list(best_z.T))
         return best_x, chi_sq[jnp.nanargmax(log_prob)]
@@ -318,7 +318,12 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             samples = sample_mcmc(samples, scalings, seeds_2)
             t_sample = time.time() - t
             print(f'MCMC completed, time: {t_sample / 60:.1f} min')
+            # shape (dev_cnt, post_sampling_steps, n_particles * n_ensembles / dev_cnt, n_dim)
+            # -> (post_sampling_steps, n_particles * n_ensembles, n_dim)
+            samples = jnp.swapaxes(samples, 0, 1)
             samples = jnp.reshape(samples, (post_sampling_steps, -1, n_dim))
         else:
+            # shape (dev_cnt, n_particles * n_ensembles / dev_cnt, n_dim)
+            # -> (1, n_particles * n_ensembles, n_dim)
             samples = jnp.reshape(samples, (1, -1, n_dim))
         return samples
