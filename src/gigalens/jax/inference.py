@@ -291,8 +291,9 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 name="SMC"
             )
             scalings_ = jnp.exp(final_kernel_results.particle_info.log_scalings)
+            log_prob_ = final_kernel_results.particle_info.tempered_log_prob
 
-            return samples_, scalings_
+            return samples_, scalings_, log_prob_
 
         @pmap
         def sample_mcmc(start_z, scalings_, seed_):
@@ -301,35 +302,41 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
                 [start_z],
                 scalings_
             )
-            samples_ = tfp.mcmc.sample_chain(
+            samples_, log_prob_ = tfp.mcmc.sample_chain(
                 num_results=post_sampling_steps,
                 num_burnin_steps=0,
                 current_state=start_z,
                 kernel=kernel,
-                trace_fn=None,
+                trace_fn=lambda _, pkr: pkr.accepted_results.target_log_prob,
                 seed=seed_,
             )
-            return samples_
+            return samples_, log_prob_
 
         t = time.time()
         print("starting SMC")
-        samples, scalings = sample_smc(start, seeds_1)
+        samples, scalings, log_prob = sample_smc(start, seeds_1)
         samples = jnp.reshape(samples, (dev_cnt, -1, n_dim))
         scalings = jnp.reshape(scalings, (dev_cnt, -1))
+        log_prob = jnp.reshape(log_prob, (dev_cnt, -1))
         t_sample = time.time() - t
         print(f'SMC completed, time: {t_sample / 60:.1f} min')
         if post_sampling_steps > 0:
             t = time.time()
             print("starting MCMC sampling")
-            samples = sample_mcmc(samples, scalings, seeds_2)
+            samples, log_prob = sample_mcmc(samples, scalings, seeds_2)
             t_sample = time.time() - t
             print(f'MCMC completed, time: {t_sample / 60:.1f} min')
             # shape (dev_cnt, post_sampling_steps, n_particles * n_ensembles / dev_cnt, n_dim)
             # -> (post_sampling_steps, n_particles * n_ensembles, n_dim)
             samples = jnp.swapaxes(samples, 0, 1)
             samples = jnp.reshape(samples, (post_sampling_steps, -1, n_dim))
+            log_prob = jnp.swapaxes(log_prob, 0, 1)
+            log_prob = jnp.reshape(log_prob, (post_sampling_steps, -1))
         else:
             # shape (dev_cnt, n_particles * n_ensembles / dev_cnt, n_dim)
             # -> (1, n_particles * n_ensembles, n_dim)
             samples = jnp.reshape(samples, (1, -1, n_dim))
-        return samples
+            log_prob = jnp.reshape(log_prob, (1, -1))
+        map_idx = jnp.unravel_index(jnp.argmax(log_prob), log_prob.shape)
+        best_model = jnp.expand_dims(samples[map_idx], axis=0)
+        return samples, best_model
