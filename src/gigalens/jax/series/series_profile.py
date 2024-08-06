@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import jit
 from jax.scipy.special import factorial
 
-from gigalens.tf.profile import MassProfile
+from gigalens.jax.profile import MassProfile
 from abc import ABC, abstractmethod
 
 
