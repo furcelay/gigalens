@@ -7,7 +7,7 @@ import gigalens.jax.profiles.mass.nfw
 import gigalens.jax.profiles.mass.piemd
 import gigalens.jax.profiles.mass.piep
 import gigalens.jax.profiles.mass.scaling_relation
-# import gigalens.jax.profiles.mass.scaling_series
-# import gigalens.jax.profiles.mass.dpie_series
+import gigalens.jax.profiles.mass.scaling_series
+import gigalens.jax.profiles.mass.dpie_series
 import gigalens.jax.profiles.mass.dpie_subhalo
-# import gigalens.jax.profiles.mass.dpie_subhalo_series
+import gigalens.jax.profiles.mass.dpie_subhalo_series

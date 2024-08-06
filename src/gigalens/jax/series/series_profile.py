@@ -2,7 +2,7 @@ import functools
 
 import jax.numpy as jnp
 from jax import jit
-from jax.scipy.special import factorial
+from gigalens.jax.series.util import factorial
 
 from gigalens.jax.profile import MassProfile
 from abc import ABC, abstractmethod
