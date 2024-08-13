@@ -16,6 +16,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             self,
             prior: tfd.Distribution,
             observed_image=None,
+            mask=None,
             background_rms=None,
             exp_time=None,
             error_map=None,
@@ -30,6 +31,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
 
         if self.include_pixels:
             self.observed_image = jnp.array(observed_image)
+            if mask is not None:
+                self.mask = jnp.array(mask, dtype=bool)
+            else:
+                self.mask = jnp.ones_like(self.observed_image, dtype=bool)
             if error_map is not None:
                 self.error_map = jnp.array(error_map)
             else:
@@ -67,10 +72,10 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         # log_like = tfd.Independent(
         #     tfd.Normal(im_sim, err_map), reinterpreted_batch_ndims=2
         # ).log_prob(self.observed_image)
-        chi2 = jnp.sum(((im_sim - obs_img) / err_map) ** 2 * simulator.img_region, axis=(-2, -1))
-        normalization = jnp.sum(jnp.log(2 * np.pi * err_map ** 2) * simulator.img_region, axis=(-2, -1))
+        chi2 = jnp.sum(((im_sim - obs_img) / err_map) ** 2 * self.mask, axis=(-2, -1))
+        normalization = jnp.sum(jnp.log(2 * np.pi * err_map ** 2) * self.mask, axis=(-2, -1))
         log_like = -1 / 2 * (chi2 + normalization)
-        red_chi2 = chi2 / jnp.count_nonzero(simulator.img_region)
+        red_chi2 = chi2 / jnp.count_nonzero(self.mask)
         return log_like, red_chi2
 
     @functools.partial(jit, static_argnums=(0, 1))
