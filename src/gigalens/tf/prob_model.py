@@ -30,6 +30,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
         self,
         prior: tfd.Distribution,
         observed_image=None,
+        mask=None,
         background_rms=None,
         exp_time=None,
         error_map=None,
@@ -42,19 +43,27 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
     ):
         super(ForwardProbModel, self).__init__(prior, include_pixels, include_positions)
 
+        self.event_size = tf.zeros(1)
+
         if self.include_pixels:
             self.observed_image = tf.constant(observed_image, dtype=tf.float32)
+            if mask is not None:
+                self.mask = tf.constant(mask, dtype=bool)
+            else:
+                self.mask = tf.ones_like(self.observed_image, dtype=bool)
             if error_map is not None:
                 self.error_map = tf.constant(error_map, dtype=tf.float32)
             else:
                 self.background_rms = tf.constant(background_rms, dtype=tf.float32)
                 self.exp_time = tf.constant(exp_time, dtype=tf.float32)
+            self.event_size += tf.cast(tf.math.count_nonzero(self.mask), tf.float32)
         if self.include_positions:
             self.centroids_x = [tf.expand_dims(tf.constant(cx, dtype=tf.float32), -1) for cx in centroids_x]
             self.centroids_y = [tf.expand_dims(tf.constant(cy, dtype=tf.float32), -1) for cy in centroids_y]
             self.centroids_errors_x = [tf.convert_to_tensor(cex, dtype=tf.float32) for cex in centroids_errors_x]
             self.centroids_errors_y = [tf.convert_to_tensor(cey, dtype=tf.float32) for cey in centroids_errors_y]
             self.n_position = 2 * tf.size(tf.concat(self.centroids_x, axis=0), out_type=tf.float32)
+            self.event_size += self.n_position
 
         example = prior.sample(seed=0)
         size = int(tf.size(tf.nest.flatten(example)))
