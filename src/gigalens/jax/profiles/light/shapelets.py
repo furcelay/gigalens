@@ -15,7 +15,8 @@ class Shapelets(gigalens.profile.LightProfile):
 
     def __init__(self, n_max, use_lstsq=False, is_source=False, interpolate=True):
         super(Shapelets, self).__init__(use_lstsq=use_lstsq, is_source=is_source)
-        del self.params[self.params.index(self._amp)]
+        if not self.use_lstsq:
+            del self.params[self.params.index(self._amp)]
         self.n_layers = int((n_max + 1) * (n_max + 2) / 2)
         self.n_max = n_max
         self.interpolate = interpolate
