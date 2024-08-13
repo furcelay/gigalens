@@ -337,6 +337,6 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             # -> (1, n_particles * n_ensembles, n_dim)
             samples = jnp.reshape(samples, (1, -1, n_dim))
             log_prob = jnp.reshape(log_prob, (1, -1))
-        map_idx = jnp.unravel_index(jnp.argmax(log_prob), log_prob.shape)
+        map_idx = jnp.unravel_index(jnp.nanargmax(log_prob), log_prob.shape)
         best_model = jnp.expand_dims(samples[map_idx], axis=0)
         return samples, best_model
