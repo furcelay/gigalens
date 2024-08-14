@@ -233,14 +233,27 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             beta_x, beta_y = self.img_X, self.img_Y
 
         img = jnp.zeros((0, self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample, self.bs))
+
         for i, lightModel in enumerate(self.phys_model.lens_light):
             p = lens_light_params.get(str(i), {})
             c = lens_light_constants.get(str(i), {})
             img = jnp.concatenate((img, lightModel.light(self.img_X, self.img_Y, **p, **c)), axis=0)
+
+        # deflection
+        f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
+
         for i, lightModel in enumerate(self.phys_model.source_light):
             p = source_light_params.get(str(i), {})
             c = source_light_constants.get(str(i), {})
-            img = jnp.concatenate((img, lightModel.light(beta_x, beta_y, **p, **c)), axis=0)
+
+            pc = (p | c)
+            deflect_rat = pc.pop('deflection_ratio')
+            if no_deflection:
+                beta_x, beta_y = self.img_X, self.img_Y
+            else:
+                beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
+
+            img = jnp.concatenate((img, lightModel.light(beta_x, beta_y, **pc)), axis=0)
 
         img = jnp.nan_to_num(img)
         img = jnp.transpose(img, (3, 0, 1, 2))  # bs, n components, h, w

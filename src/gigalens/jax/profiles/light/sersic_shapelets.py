@@ -27,7 +27,9 @@ class SersicShapelets(gigalens.profile.LightProfile):
 
     @functools.partial(jit, static_argnums=(0,))
     def light(self, x, y, **params):
-        ret = jnp.zeros_like(x)
-        ret += self.sersic.light(x, y, **{param: params[param] for param in self.sersic.params})
-        ret += self.shapelets.light(x, y, **{param: params[param] for param in self.shapelets.params})
-        return ret[jnp.newaxis, ...] if self.use_lstsq else ret
+        ret_sersic = self.sersic.light(x, y, **{param: params[param] for param in self.sersic.params})
+        ret_shapelets = self.shapelets.light(x, y, **{param: params[param] for param in self.shapelets.params})
+        if self.use_lstsq:
+            return jnp.concatenate((ret_sersic, ret_shapelets), axis=0)
+        else:
+            return ret_sersic + ret_shapelets
