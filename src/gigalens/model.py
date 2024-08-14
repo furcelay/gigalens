@@ -82,6 +82,7 @@ class ProbabilisticModel(ABC):
         self.bij = None
         self.pack_bij = None
         self.unconstraining_bij = None
+        self.event_size = 0
 
     @abstractmethod
     def log_prob(self, simulator, z):
