@@ -29,7 +29,8 @@ class Shapelets(gigalens.profile.LightProfile):
         decimal_places = len(str(self.n_layers))
         self._amp_names = []
         for i in range(self.n_layers):
-            self.params.append(f"amp{str(i).zfill(decimal_places)}")
+            if not self.use_lstsq:
+                self.params.append(f"amp{str(i).zfill(decimal_places)}")
             self._amp_names.append(f"amp{str(i).zfill(decimal_places)}")
             self.N1.append(n1)
             self.N2.append(n2)
