@@ -211,7 +211,7 @@ class BackwardProbModel(gigalens.model.ProbabilisticModel):
 
     @functools.partial(jit, static_argnums=(0, 1))
     def stats_pixels(self, simulator: sim.LensSimulator, params):
-        im_sim = im_sim = simulator.lstsq_simulate(params, self.observed_image, self.error_map)
+        im_sim = simulator.lstsq_simulate(params, self.observed_image, self.error_map)
         log_like = self.observed_dist.log_prob(im_sim[:, self.mask])
         red_chi2 = jnp.mean(
             ((im_sim - self.observed_image) / self.error_map)[:, self.mask] ** 2, axis=-1
