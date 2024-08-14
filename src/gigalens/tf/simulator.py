@@ -31,18 +31,9 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             self.transform_pix2angle, dtype=tf.float32
         ) / float(self.supersample)
 
-        if sim_config.pix_region is None:
-            region = np.ones((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample), dtype=bool)
-            img_region = np.ones((self.wcs.n_x, self.wcs.n_y))
-        else:
-            img_region = sim_config.pix_region
-            region = np.repeat(img_region, self.supersample, axis=0).reshape(self.wcs.n_x * self.supersample,
-                                                                             self.wcs.n_y)
-            region = np.repeat(region, self.supersample, axis=1).reshape(self.wcs.n_x * self.supersample,
-                                                                         self.wcs.n_y * self.supersample)
-        self.region = tf.constant(tf.where(region))
-        self.img_region = tf.constant(img_region.astype(np.float32))
-        img_X, img_Y = self.wcs.pix2angle(self.region[:, 1], self.region[:, 0])
+        _, _, img_X, img_Y = self.get_coords(
+            self.supersample, sim_config.num_pix, self.transform_pix2angle
+        )
         self.img_X = tf.constant(
             tf.repeat(img_X[..., tf.newaxis], [bs], axis=-1), dtype=tf.float32
         )
@@ -187,9 +178,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         for i, lightModel in enumerate(self.phys_model.lens_light):
             p = lens_light_params.get(str(i), {})
             c = lens_light_constants.get(str(i), {})
-            img = tf.tensor_scatter_nd_add(img,
-                                           self.region,
-                                           lightModel.light(self.img_X, self.img_Y, **p, **c))
+            img += lightModel.light(self.img_X, self.img_Y, **p, **c)
 
         # deflection
         f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
@@ -205,9 +194,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             else:
                 beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
 
-            img = tf.tensor_scatter_nd_add(img,
-                                           self.region,
-                                           lightModel.light(beta_x, beta_y, **pc))
+            img += lightModel.light(beta_x, beta_y, **pc)
 
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
@@ -252,20 +239,15 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             p = lens_light_params.get(str(i), {})
             c = lens_light_constants.get(str(i), {})
             img = tf.concat(
-                (img,
-                 tf.scatter_nd(self.region,
-                               lightModel.light(self.img_X, self.img_Y, **p, **c)[tf.newaxis, ...],
-                               img.shape)),
+                (img, lightModel.light(self.img_X, self.img_Y, **p, **c)[tf.newaxis, ...]),
                 axis=0,
             )
         for i, lightModel in enumerate(self.phys_model.source_light):
             p = source_light_params.get(str(i), {})
             c = source_light_constants.get(str(i), {})
             img = tf.concat(
-                (img,
-                 tf.scatter_nd(self.region,
-                               lightModel.light(beta_x, beta_y, **p, **c)[tf.newaxis, ...],
-                               img.shape)),
+                (img, lightModel.light(beta_x, beta_y, **p, **c)[tf.newaxis, ...]),
+                axis=0
             )
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(
@@ -318,9 +300,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         for i, lightModel in enumerate(self.phys_model.source_light):
             p = source_light_params.get(str(i), {})
             c = source_light_constants.get(str(i), {})
-            img = tf.tensor_scatter_nd_add(img,
-                                           self.region,
-                                           lightModel.light(self.img_X, self.img_Y, **p, **c))
+            img += lightModel.light(self.img_X, self.img_Y, **p, **c)
 
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
@@ -348,9 +328,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         for i, lightModel in enumerate(self.phys_model.lens_light):
             p = lens_light_params.get(str(i), {})
             c = lens_light_constants.get(str(i), {})
-            img = tf.tensor_scatter_nd_add(img,
-                                           self.region,
-                                           lightModel.light(self.img_X, self.img_Y, **p, **c))
+            img += lightModel.light(self.img_X, self.img_Y, **p, **c)
 
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(img, (2, 0, 1))  # batch size, height, width
@@ -388,9 +366,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             deflect_rat = pc.pop('deflection_ratio')
             beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
 
-            img = tf.tensor_scatter_nd_add(img,
-                                           self.region,
-                                           lightModel.light(beta_x, beta_y, **pc))
+            img += lightModel.light(beta_x, beta_y, **pc)
 
         img = tf.where(tf.math.is_nan(img), tf.zeros_like(img), img)
         img = tf.transpose(img, (2, 0, 1))  # batch size, height, width

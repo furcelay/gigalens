@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional
 
 import numpy as np
 from lenstronomy.Data.pixel_grid import PixelGrid
@@ -26,7 +26,6 @@ class SimulatorConfig:
     supersample: Optional[int] = 1
     kernel: Optional[Any] = None
     transform_pix2angle: Optional[np.array] = None
-    pix_region: Optional[np.array] = None
 
 
 class LensWCS:

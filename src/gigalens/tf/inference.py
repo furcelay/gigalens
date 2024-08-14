@@ -23,11 +23,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             self.phys_model, self.sim_config, bs=n_samples
         )
 
-        event_size = tf.zeros(1)
-        if self.prob_model.include_pixels:
-            event_size += tf.cast(tf.math.count_nonzero(lens_sim.img_region), tf.float32)
-        if self.prob_model.include_positions:
-            event_size += self.prob_model.n_position
+        event_size = self.prob_model.event_size
 
         def train_step():
             with tf.GradientTape() as tape:

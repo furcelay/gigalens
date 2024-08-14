@@ -33,20 +33,9 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         self.conversion_factor = jnp.linalg.det(self.transform_pix2angle)
         self.transform_pix2angle = self.transform_pix2angle / float(self.supersample)
 
-        if sim_config.pix_region is None:
-            region = np.ones((self.wcs.n_x * self.supersample, self.wcs.n_y * self.supersample), dtype=bool)
-            img_region = np.ones((self.wcs.n_x, self.wcs.n_y))
-        else:
-            img_region = sim_config.pix_region
-            region = np.repeat(img_region, self.supersample, axis=0).reshape(self.wcs.n_x * self.supersample,
-                                                                             self.wcs.n_y)
-            region = np.repeat(region, self.supersample, axis=1).reshape(self.wcs.n_x * self.supersample,
-                                                                         self.wcs.n_y * self.supersample)
-
-        self.region = jnp.array(jnp.where(region))
-        self.img_region = jnp.array(img_region.astype(np.float32))
-        img_X, img_Y = self.wcs.pix2angle(self.region[1], self.region[0])
-
+        _, _, img_X, img_Y = self.get_coords(
+            self.supersample, sim_config.num_pix, np.array(self.transform_pix2angle)
+        )
         self.img_X = jnp.repeat(img_X[..., jnp.newaxis], bs, axis=-1)
         self.img_Y = jnp.repeat(img_Y[..., jnp.newaxis], bs, axis=-1)
 
@@ -181,7 +170,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         for i, lightModel in enumerate(self.phys_model.lens_light):
             p = lens_light_params.get(str(i), {})
             c = lens_light_constants.get(str(i), {})
-            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(self.img_X, self.img_Y, **p, **c))
+            img += lightModel.light(self.img_X, self.img_Y, **p, **c)
 
         # deflection
         f_x, f_y = self.alpha(self.img_X, self.img_Y, lens_params)
@@ -198,8 +187,8 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             else:
                 beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
 
-            img = img.at[(self.region[0], self.region[1])].add(lightModel.light(beta_x, beta_y, **pc))
-        img = jnp.transpose(img, (2, 0, 1))
+            img += lightModel.light(beta_x, beta_y, **pc)
+        img = jnp.transpose(img, (3, 0, 1))
         img = jnp.nan_to_num(img)
         ret = (
             lax.conv(img[:, jnp.newaxis, ...], self.flat_kernel, (1, 1), "SAME")
