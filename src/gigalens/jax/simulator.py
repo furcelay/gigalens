@@ -188,7 +188,7 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
                 beta_x, beta_y = self.img_X - deflect_rat * f_x, self.img_Y - deflect_rat * f_y
 
             img += lightModel.light(beta_x, beta_y, **pc)
-        img = jnp.transpose(img, (3, 0, 1))
+        img = jnp.transpose(img, (2, 0, 1))
         img = jnp.nan_to_num(img)
         ret = (
             lax.conv(img[:, jnp.newaxis, ...], self.flat_kernel, (1, 1), "SAME")
