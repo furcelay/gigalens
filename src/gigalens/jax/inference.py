@@ -153,6 +153,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             num_burnin_steps=250,
             num_results=750,
             max_leapfrog_steps=30,
+            num_steps_between_results=1,
             seed=0,
     ):
         dev_cnt = jax.device_count()
@@ -195,6 +196,7 @@ class ModellingSequence(gigalens.inference.ModellingSequenceInterface):
             return tfp.mcmc.sample_chain(
                 num_results=num_results,
                 num_burnin_steps=num_burnin_steps,
+                num_steps_between_results=num_steps_between_results,
                 current_state=start,
                 trace_fn=lambda _, pkr: None,
                 seed=seed,

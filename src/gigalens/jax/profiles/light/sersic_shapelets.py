@@ -18,6 +18,7 @@ class SersicShapelets(gigalens.profile.LightProfile):
         self.shapelets = shapelets.Shapelets(n_max, use_lstsq=use_lstsq, is_source=is_source, interpolate=interpolate)
         self.shared_params = ["center_x", "center_y", "e1", "e2"]
         self.params = []
+        self.depth = self.sersic.depth + self.shapelets.depth
         for param in self.sersic.params + self.shapelets.params:
             if param not in self.params:
                 self.params.append(param)
