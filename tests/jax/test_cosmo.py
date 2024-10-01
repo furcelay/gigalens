@@ -1,4 +1,4 @@
-from astropy.cosmology import wCDM
+from astropy.cosmology import wCDM, w0waCDM
 from gigalens.jax.cosmo import Cosmo
 import numpy as np
 import numpy.testing as npt
@@ -11,7 +11,8 @@ class TestCosmo(unittest.TestCase):
             'H0': 70,
             'Om0': 0.3,
             'k': 0.0,
-            'w0': -1
+            'w0': -1,
+            'wa': 0
         }
         self.cosmo = Cosmo(z_lens=0.5, z_source_ref=2.0)
         Ok0 = - self.cosmo_params['k'] / self.cosmo_params['H0'] ** 2
@@ -85,10 +86,32 @@ class TestCosmo(unittest.TestCase):
             'H0': 70,
             'Om0': np.array([0.3, 0.4, 0.5]),
             'k': 0.0,
-            'w0': -1
+            'w0': -1,
+            'wa': 0
         }
         d = self.cosmo.lensing_distance(z_source, **cosmo_params)
         assert d.shape == (3,)
+
+    def test_evolving_w(self):
+        z_source = np.array([0.7])
+        cosmo_params = {
+            'H0': 70,
+            'Om0': 0.3,
+            'k': 0.0,
+            'w0': -0.9,
+            'wa': 0.3
+        }
+        d = self.cosmo.angular_distance(z_source, **cosmo_params)
+        cosmo_ref = w0waCDM(
+            H0=self.cosmo_ref.H0.value,
+            Om0=self.cosmo_ref.Om0,
+            Ode0=self.cosmo_ref.Ode0,
+            w0=cosmo_params['w0'],
+            wa=cosmo_params['wa'],
+            Tcmb0=self.cosmo_ref.Tcmb0.value,
+        )
+        d_ref = cosmo_ref.angular_diameter_distance(z_source).value
+        npt.assert_allclose(d, d_ref, rtol=1e-5)
 
 
 if __name__ == '__main__':

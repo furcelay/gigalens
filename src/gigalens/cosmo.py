@@ -20,8 +20,9 @@ class CosmoBase(Parameterized, ABC):
         h = H0 / 100
         return 2.469e-5 * h ** -2.0 * (1.0 + 0.2271 * self.Neff)
 
-    def dark_energy_eos(self, z, w0, wa):
-        return w0 + wa * (1 - (1 + z) ** -1)
+    @staticmethod
+    def dark_energy_eos(z, w0, wa):
+        return w0 + wa * z / (1.0 + z)
 
     def comoving_distance_z1z2(self, z1, z2, H0, Om0, k, w0, wa):
         def integrand(z):
