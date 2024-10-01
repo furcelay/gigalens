@@ -22,8 +22,10 @@ class Cosmo(CosmoBase):
         Ok0 = - k / H0 ** 2
         curvature = Ok0 * (1 + z)**2
         Ode0 = (1.0 - Om0 - Or0 - Ok0)
-        w_de = self.dark_energy_eos(z, w0, wa)
-        dark_energy = Ode0 * (1 + z) ** (3 * (1 + w_de))
+        # w_de = self.dark_energy_eos(z, w0, wa)
+        # dark_energy = Ode0 * (1 + z) ** (3 * (1 + w_de))
+        # this is the same as above but with the astropy cosmology implementation
+        dark_energy = Ode0 * (1 + z) ** (3 * (1 + w0 + wa)) * jnp.exp(-3 * wa * z / (1 + z))
 
         E = jnp.sqrt(matter + relativistic + dark_energy + curvature)
         return E
