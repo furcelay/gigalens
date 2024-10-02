@@ -3,7 +3,7 @@ from gigalens.cosmo import CosmoBase
 
 
 class Cosmo(CosmoBase):
-    _name = "dPIS"
+    _name = "w0waCDM"
     _params = ['H0', 'Om0', 'k', 'w0', 'wa']
 
     def __init__(self, z_lens, z_source_ref=10.0):
