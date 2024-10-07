@@ -24,7 +24,7 @@ class ForwardProbModel(gigalens.model.ProbabilisticModel):
             centroids_errors_x=None,
             centroids_errors_y=None,
             include_pixels=True,
-            include_positions=True,
+            include_positions=False,
     ):
         super(ForwardProbModel, self).__init__(prior, include_pixels, include_positions)
 
