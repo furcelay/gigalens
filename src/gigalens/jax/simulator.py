@@ -224,9 +224,11 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
         lens_params = params.get('lens_mass', {})
         lens_light_params = params.get('lens_light', {})
         source_light_params = params.get('source_light', {})
+        cosmo_params = params.get('cosmo', {})
 
         lens_light_constants = self.phys_model.constants.get('lens_light', {})
         source_light_constants = self.phys_model.constants.get('source_light', {})
+        cosmo_constants = self.phys_model.constants.get('cosmo', {})
 
         beta_x, beta_y = self.beta(self.img_X, self.img_Y, lens_params)
         if no_deflection:
@@ -247,7 +249,8 @@ class LensSimulator(gigalens.simulator.LensSimulatorInterface):
             c = source_light_constants.get(str(i), {})
 
             pc = (p | c)
-            deflect_rat = pc.pop('deflection_ratio')
+            z_source = pc.pop('z_source')
+            deflect_rat = self.phys_model.cosmo.deflection_ratio(z_source, **cosmo_params, **cosmo_constants)
             if no_deflection:
                 beta_x, beta_y = self.img_X, self.img_Y
             else:
