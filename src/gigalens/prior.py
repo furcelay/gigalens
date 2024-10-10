@@ -26,6 +26,10 @@ class ProfilePrior:
             if isinstance(p, self._tfd.Distribution):
                 self.variables[k] = p
                 self.num_free_params += 1
+            elif callable(p) and p.__name__ == "<lambda>":
+                # it is a relative prior
+                self.variables['k'] = p
+                self.num_free_params += 1
             else:
                 try:
                     self.constants[k] = [float(p)]
