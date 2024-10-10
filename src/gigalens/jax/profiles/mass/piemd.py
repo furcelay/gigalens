@@ -99,6 +99,9 @@ class DPIS(MassProfile):
 
 
 class DPIE(MassProfile):
+    """
+    Dual Pseudo Isothermal Ellipse
+    """
     _name = "dPIE"
     _params = ['theta_E', 'r_core', 'r_cut', 'center_x', 'center_y', 'e1', 'e2']
     _r_min = 0.0001
